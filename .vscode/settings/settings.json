@@ -1,0 +1,45 @@
+//Extensions used in settings: GitLens, PowerShell, Trailing Spaces, Shell launcher, vscode-icons
+{
+    "terminal.integrated.shell.windows": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    "powershell.integratedConsole.showOnStartup": false,
+    "terminal.integrated.windowsEnableConpty": true,
+    "files.trimTrailingWhitespace": true,
+    "files.trimFinalNewlines": true,
+    "files.insertFinalNewline": true,
+    "editor.formatOnType": true,
+    "git.path": "c:/Program Files/Git/bin/git.exe",
+    "breadcrumbs.enabled": true,
+    "editor.renderControlCharacters": false,
+    "editor.renderWhitespace": "boundary",
+    "explorer.confirmDelete": false,
+    "editor.tabCompletion": "on",
+    "editor.cursorBlinking": "smooth",
+    "editor.cursorSmoothCaretAnimation": true,
+    "editor.insertSpaces": true,
+    "workbench.editor.highlightModifiedTabs": true,
+    "git.enableSmartCommit": true,
+    "shellLauncher.shells.windows": [
+        {
+            "shell": "C:/Program Files/PowerShell/7/pwsh.exe",
+            "label": "PowerShell Core"
+        },
+        {
+            "shell": "C:/WINDOWS/System32/WindowsPowerShell/v1.0/powershell.exe",
+            "label": "PowerShell 5.1"
+        },
+        {
+            "shell": "C:\\Windows\\System32\\cmd.exe",
+            "label": "cmd"
+        }
+    ],
+    "editor.minimap.enabled": true,
+    "trailing-spaces.trimOnSave": true,
+    "diffEditor.ignoreTrimWhitespace": true,
+    "git.confirmSync": false,
+    "git.autofetch": true,
+    "editor.suggestSelection": "first",
+    "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
+    "workbench.iconTheme": "vscode-icons",
+    "editor.detectIndentation": false,
+    "explorer.confirmDragAndDrop": false
+}

@@ -1,0 +1,20 @@
+// Place your key bindings in this file to overwrite the defaults
+[
+    {
+        "key": "f8",
+        "command": "workbench.action.terminal.runSelectedText"
+    },
+    {
+        "key": "f5",
+        "command": "-workbench.action.debug.start",
+        "when": "!inDebugMode"
+    },
+    {
+        "key": "ctrl+alt+pagedown",
+        "command": "workbench.action.terminal.focusNext"
+    },
+    {
+        "key": "ctrl+alt+pageup",
+        "command": "workbench.action.terminal.focusPrevious"
+    }
+]

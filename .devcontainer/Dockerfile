@@ -16,7 +16,8 @@ RUN $ErrorActionPreference='Stop'; \
     Stop-Transcript;
 
 # Copy pwsh profile
-COPY library-scripts/profile.ps1 /opt/microsoft/powershell/7/
+COPY src/profile.ps1 /opt/microsoft/powershell/7/
+COPY src/.zshrc /root/
 
 # Default commands to pwsh
 ENTRYPOINT ["pwsh","-c"]
