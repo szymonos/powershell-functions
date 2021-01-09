@@ -8,16 +8,7 @@ FROM mcr.microsoft.com/azure-functions/powershell:3.0-powershell${VARIANT}-core-
 # Install PowerShell modules
 SHELL ["/usr/bin/pwsh", "-c"]
 RUN $ErrorActionPreference='Stop'; \
-    Start-Transcript -Path /Dockerfile.log -Append -IncludeInvocationHeader; \
-    $PSVersionTable | Write-Output; \
-    Install-Module posh-git -AllowPrerelease -Force; \
-    Install-Module PSReadLine -Force -SkipPublisherCheck -AllowPrerelease; \
-    New-Item /root/.config/powershell/ -Type Directory -Force; \
-    Stop-Transcript;
+    Install-Module PSReadLine -Force -AllowPrerelease;
 
 # Copy pwsh profile
-COPY src/profile.ps1 /opt/microsoft/powershell/7/
-COPY src/.zshrc /root/
-
-# Default commands to pwsh
-ENTRYPOINT ["pwsh","-c"]
+COPY src/profile.ps1 /root/.config/powershell/

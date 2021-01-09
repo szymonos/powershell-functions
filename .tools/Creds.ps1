@@ -3,8 +3,8 @@
 Sample script for managing credentials using clixml and azure key vault
 #>
 
-<### Manage credentials using CliXml ###>
-## Set credentials with username and password into variable
+# *Manage credentials using CliXml
+# set credentials with username and password into variable
 $user = 'CONTOSO\username'
 $pass = ConvertTo-SecureString -String 'p@ssw0rd' -AsPlainText -Force
 $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user, $pass
@@ -12,38 +12,20 @@ $cred = New-Object -TypeName System.Management.Automation.PSCredential -Argument
 $user = 'CONTOSO\username'
 $cred = Get-Credential $user -Message "Provide password for $user"
 
-## Export credentials to file
+# export credentials to file
 $cred | Export-CliXml -Path '.\.assets\export\cred.xml'
 $cred | Export-CliXml -Path "$($env:USERPROFILE)\cred.xml"
 
-## Import credentials
+# import credentials
 $cred = Import-CliXml -Path '.\.assets\export\cred.xml'
 $cred = Import-CliXml -Path "$($env:USERPROFILE)\cred.xml"
 
-## Get user and pass from credential file
+# get user and pass from credential file
 Import-CliXml -Path "$($env:USERPROFILE)\cred.xml" | Select-Object -Property UserName, @{Name = 'Password'; Expression = {$_.GetNetworkCredential().Password}}
 $cred.GetNetworkCredential().UserName
 $cred.GetNetworkCredential().Password
 
-<### Manage credentials using Azure Key Vault ###>
-$keyVault = 'ContosoKeyVault'
-$secretName = 'ExampleSecret'
-$secretValue = ConvertTo-SecureString 'P@ssw0rd' -AsPlainText -Force
-# Set simple secret
-Set-AzKeyVaultSecret -VaultName $keyVault -Name $secretName -SecretValue $secretValue
-# Set secret with content type
-$contentType = 'sql-login'
-Set-AzKeyVaultSecret -VaultName $keyVault -Name $secretName -SecretValue $secretValue -ContentType
-# Set secret with content type and tags
-$tags = @{ 'login' = 'sqllogin'; 'srv' = 'srvname' }
-Set-AzKeyVaultSecret -VaultName $keyVault -Name $secretName -SecretValue $secretValue -ContentType $contentType -Tags $tags
-
-# Retreive secrets list
-Get-AzKeyVaultSecret -VaultName $keyVault | Select-Object -Property Name, @{Name = 'Login'; Expression = { $_.Tags.login } }, ContentType
-# Retreive secret value
-(Get-AzKeyVaultSecret -VaultName $keyVault -Name $secretName).SecretValueText
-
-<### Change AD passwwrd for a user ###>
+# *Change AD passwwrd for a user
 $domain = 'CONTOSO'
 $identity = 'username'
 $oldPass = ConvertTo-SecureString -AsPlainText 'old_password' -Force
@@ -53,13 +35,21 @@ Set-ADAccountPassword -Credential $oldcred -Identity $identity -OldPassword $old
 $newCred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "$domain\$identity", $newPass
 $newCred | Export-CliXml -Path "$($env:USERPROFILE)\$identity.xml"
 
+<# *Microsoft.PowerShell.SecretsManagement
+.LINK
+https://github.com/powershell/secretmanagement
+https://devblogs.microsoft.com/powershell/secretmanagement-preview-3/
+https://devblogs.microsoft.com/powershell/secretmanagement-and-secretstore-updates/
+.EXAMPLE
+Install-Module -Name Microsoft.PowerShell.SecretManagement -Scope CurrentUser -AllowPrerelease -Force
+Install-Module -Name Microsoft.PowerShell.SecretStore -Scope CurrentUser -AllowPrerelease -Force
+Reset-SecretStore
+Register-SecretVault -Name SecretStore -ModuleName Microsoft.PowerShell.SecretStore -DefaultVault
 
-<### Microsoft.PowerShell.SecretsManagement ###
-Install-Module Microsoft.PowerShell.SecretManagement -AllowPrerelease
-Import-Module Microsoft.PowerShell.SecretsManagement
+Get-InstalledModule -Name Microsoft.PowerShell.SecretManagement | Select-Object *
 #>
-# Registering extension vaults
-Register-SecretVault
+# register extension vaults
+Register-SecretVault -Name SecretStore -ModuleName Microsoft.PowerShell.SecretStore -DefaultVault
 Get-SecretVault
 Unregister-SecretVault
 Test-SecretVault # new cmdlet in this release
@@ -72,17 +62,17 @@ Remove-Secret 'secretname' -Vault BuiltInLocalVault
 
 Get-Help Get-Secret
 
-# Store PSCredential
+# store PSCredential
 $secret = 'secretname'
 $user = 'username'
 $pass = ConvertTo-SecureString -String 'Passw0rd' -AsPlainText -Force
 $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user, $pass
 Set-Secret $secret -Secret $cred
-# Retreive pscredential
+# retreive pscredential
 $cred = Get-Secret $secret
 Get-Secret 'secretname' | Select-Object -Property UserName, @{Name = 'Password'; Expression = {$_.GetNetworkCredential().Password}}
 
-# Store SecureString
+# store SecureString
 Set-Secret $secret -SecureStringSecret $pass
-# Retreive secure string
+# retreive secure string
 Get-Secret $secret -AsPlainText

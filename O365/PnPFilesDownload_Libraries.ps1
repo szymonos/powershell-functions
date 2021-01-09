@@ -12,7 +12,7 @@ Get-InstalledModule -Name SharePointPnPPowerShellOnline | Select-Object *
 
 #Set Parameters
 
-$TenantSiteURL = 'https://abcdata.sharepoint.com'
+$TenantSiteURL = 'https://contoso.sharepoint.com'
 $SiteRelativeURL = '\sites\dynamicsdocs'
 $rootDir = 'D:\Migration\SPOnline'
 $libraries = 'PMDocsSC', 'PMDocsPM', 'PMDocsDeploy', 'ReferenceInstructions', 'Notatki analityczne', 'Odbiory produktw', 'Raporty', 'ReferenceDocsProducts', 'ReferenceTemplates', 'PMTrainings', 'PMTests', 'Zaoenia  zakres'

@@ -3,12 +3,17 @@
 #>
 
 # Assemblies required for Azure Active Directory Authentication
+$verSqlClient = '2.0.1'
+$verSqlSNI = '2.1.1'
+$verIdentity = '4.22.0'
+$nugetPackages = 'C:\Program Files\PackageManagement\NuGet\Packages'
+$sqlClient = "$nugetPackages\Microsoft.Data.SqlClient.$verSqlClient\runtimes\win\lib\netcoreapp2.1\Microsoft.Data.SqlClient.dll"
+$sqlSNI = "$nugetPackages\Microsoft.Data.SqlClient.SNI.runtime.$verSqlSNI\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll"
+$identityClient = "$nugetPackages\Microsoft.Identity.Client.$verIdentity\lib\netcoreapp2.1\Microsoft.Identity.Client.dll"
 try {
     Add-Type -AssemblyName System.Data
-    # Add-Type -Path ('C:\Program Files\PackageManagement\NuGet\Packages\Microsoft.Data.SqlClient.2.0.0\runtimes\win\lib\netcoreapp2.1\Microsoft.Data.SqlClient.dll') -ReferencedAssemblies Microsoft.Data.SqlClient.SNI
-    # Add-Type -Path ('C:\Program Files\PackageManagement\NuGet\Packages\Microsoft.Identity.Client.4.17.1\lib\netcoreapp2.1\Microsoft.Identity.Client.dll')
-    Add-Type -Path ('C:\Program Files\PackageManagement\NuGet\Packages\Microsoft.Data.SqlClient.1.1.3\runtimes\win\lib\netcoreapp2.1\Microsoft.Data.SqlClient.dll')
-    Add-Type -Path ('C:\Program Files\PackageManagement\NuGet\Packages\Microsoft.Identity.Client.3.0.9\lib\netcoreapp2.1\Microsoft.Identity.Client.dll')
+    Add-Type -Path $sqlClient -ReferencedAssemblies $sqlSNI
+    Add-Type -Path $identityClient
 }
 catch {
     'Assembly already loaded'
@@ -54,21 +59,20 @@ function Resolve-ConnString {
     $builder.User = $User
     $builder.Password = $Password
     # !for compatibility: builder replaces authentication to: ActiveDirectoryPassword
-    # !                   which is not supported by sqlpackage as of 18.5.1
+    # !                   which is not supported by sqlpackage as of 18.6
     $connString = $builder.ConnectionString
     if ($User | Select-String -Pattern '@') {
         $connString += ';Authentication=Active Directory Password'
         #$builder.Authentication = "Active Directory Password"
     }
     # !for compatibility: builder replaces ApplicationIntent to: Application Intent
-    # !                   which is not supported by sqlpackage as of 18.5.1
+    # !                   which is not supported by sqlpackage as of 18.6
     if ($ConnectReplica) {
         $connString += ';ApplicationIntent=ReadOnly'
         #$builder.ApplicationIntent = 'ReadOnly'
     }
     return $connString
 }
-
 function Invoke-SqlQuery {
     [cmdletbinding()]
     param(
@@ -160,8 +164,7 @@ function Start-AzSqlDatabase {
         } else {
             $resParams.Add('User', $User)
             $resParams.Add('Password', $Password)
-        }
-        if ($ConnectReplica) {
+        } if ($ConnectReplica) {
             $resParams.Add('ConnectReplica', $ConnectReplica)
         }
         $ConnectionString = Resolve-ConnString @resParams
@@ -177,16 +180,14 @@ function Start-AzSqlDatabase {
             $SqlConnection.Open()
             'Database is online'
             $retry = $false
-        }
-        catch {
+        } catch {
             $retryCount++
             ('.' * $retryCount)
             if ($retryCount -ge 10) {
                 Write-Warning 'Resuming database failed'
                 $retry = $false
             }
-        }
-        finally {
+        } finally {
             $SqlConnection.Close()
         }
     }

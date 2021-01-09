@@ -1,11 +1,26 @@
-# Regular expressions examples
+# Regular Expressions
+
+[Basic Syntax | Markdown Guide](https://www.markdownguide.org/basic-syntax)
 
 [Regular Expressions Cheat Sheet by DaveChild](https://www.cheatography.com/davechild/cheat-sheets/regular-expressions/)
+
+***
+
+## Remove duplicated words
+
+[VSCode find and replace using regex](https://itnext.io/vscode-find-and-replace-regex-super-powers-c7f8be0fa80f)
+
+``` markdown
+\b(\w+)\s+\1\b
+\b(\w+)(?:(?![\n\r])\s)+\1\b
+----replace----
+$1
+```
 
 ## Find Missing collation
 
 ``` RegEx
-\[?(var)?char\]? *\(\d+\) +(?!COLLATE)
+\[?(var)?char\]?\s*\(\d+\)\s+(?!COLLATE)
 ```
 
 ## Find all [char] (2), char  (2) etc
@@ -14,11 +29,7 @@
 (cono(?!lang)\w*\]?) +(\[?(n?var)?char\]? *)\(2\)
 (\[?\w*(cid)\w*\]? +\[?)(char\]? *)\(10\)
 (\[?\w*(?<!vm)(oid|order)(?!type|cono)\w*\]? +\[?)(var)(char\]? *)\((? !10)\d\d\)
-```
-
-REPLACE
-
-``` RegEx
+----replace----
 $1 $2(4)
 (cono[\]]? *[\[]?[nvar]*char[\]]? *\()2
 ```
@@ -29,43 +40,25 @@ $1 $2(4)
 
 ``` RegEx
 (references [\[]?)ac
-```
-
-REPLACE
-
-``` RegEx
+----replace----
 $1dbo
 ```
-
-***
 
 ## replace all like *dsq* columns from (var)char (3/4) to varchar(10)
 
 ``` RegEx
 (\[?\w*dsq\w*\]? +\[?)(n?var)?(char\] *)\([3-4]\)
-```
-
-REPLACE
-
-``` RegEx
+----replace----
 $1var$3(10)
 ```
-
-***
 
 ## replace all keys names
 
 ``` RegEx
 (alter table.*add +constraint +[\[]?)(\w+)([\]]?.*)
-```
-
-REPLACE
-
-``` RegEx
+----replace----
 $1$2_DMS$3
 ```
-
-***
 
 ## remove all indexes
 
@@ -73,19 +66,16 @@ $1$2_DMS$3
 CREATE *(\w*)? *\w* *INDEX.*
 ```
 
-***
-
 ## Lookarounds
 
-**?=** is positive lookahead and **?!** is negative lookahead
+- **?=** is positive lookahead and **?!** is negative lookahead
+- **?<=** is positive lookbehind and **?<!** is negative lookbehind
 
 ## remove roles except LangService
 
 ``` RegEx
 GRANT +[a-z]+ +ON +\[.+\].\[.+\] +TO +\[(?!LangService)[\w]+_role\]
 ```
-
-**?<=** is positive lookbehind and **?<!** is negative lookbehind
 
 ## look for all ownerid excep topownerid
 
@@ -99,21 +89,13 @@ GRANT +[a-z]+ +ON +\[.+\].\[.+\] +TO +\[(?!LangService)[\w]+_role\]
 (?<!--)use +[\[]?xlink
 ```
 
-***
-
 ## exclude strings with LangId
 
 ``` RegEx
 [^LangId] char\(2\)
-```
-
-REPLACE
-
-``` RegEx
+----replace----
 $14
 ```
-
-***
 
 ## files to exclude (Case sensitive!)
 
@@ -121,13 +103,8 @@ $14
 *DataSync*
 ```
 
-***
-
-## Escape special characters in strings
+## Escape special characters in PowerShell
 
 ``` PowerShell
 [Regex]::Escape($regexStr)
 ```
-
-***
-[Basic Syntax | Markdown Guide](https://www.markdownguide.org/basic-syntax)

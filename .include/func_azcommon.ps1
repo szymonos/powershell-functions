@@ -36,36 +36,79 @@ function Connect-Subscription {
         }
     }
 }
-function Get-AzKeyVaultLoginPass {
+
+function Get-KeyVaultSecret {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true)][string]$VaultName,
-        [Parameter(Mandatory = $true)][string]$SecretName,
-        [switch]$PsCredential
+        [Parameter(Mandatory = $true)][string]$Name
     )
-    $kvCred = Get-AzKeyVaultSecret -VaultName $VaultName -Name $SecretName |`
-        Select-Object -Property @{Name = 'UserName'; Expression = { $_.Tags.login } } `
-        , @{Name = 'Password'; Expression = { $_.SecretValueText } } `
-        , @{Name = 'VaultName'; Expression = { $VaultName } }
-    if($PsCredential) {
-        $password = ConvertTo-SecureString -String  $kvCred.Password -AsPlainText -Force
-        New-Object System.Management.Automation.PSCredential ($kvCred.UserName, $password)
-    } else {
-        $kvCred
+    $retryCount = 0
+    while ($true) {
+        try {
+            $kvCred = Get-AzKeyVaultSecret -VaultName $VaultName -Name $Name -ErrorAction Stop
+            return $kvCred
+            break
+        }
+        catch [System.Net.Sockets.SocketException] {
+            $retryCount++
+            Start-Sleep 2
+            if ($retryCount -ge 10) {
+                Write-Error "$($_.Exception.Message) ($VaultName)"
+                break
+            }
+        }
+        catch {
+            Write-Error $_.Exception.Message
+            break
+        }
     }
 }
 function Get-AzKeyVaultCredential {
     [cmdletbinding()]
     param (
         [Parameter(Mandatory = $true)][string]$VaultName,
-        [Parameter(Mandatory = $true)][string]$SecretName
+        [Parameter(Mandatory = $true)][string]$Name,
+        [switch]$AsPlainText
     )
-    $cred = Get-AzKeyVaultSecret -VaultName $VaultName -Name $SecretName | `
-        Select-Object -Property @{Name = 'user'; Expression = { $_.Tags.login } } `
-        , @{Name = 'pass'; Expression = { ConvertTo-SecureString -String $_.SecretValueText -AsPlainText -Force } }
-    return New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $cred.user, $cred.pass
+    $kvCred = Get-KeyVaultSecret -VaultName $VaultName -Name $Name
+    if ($AsPlainText) {
+        $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($kvCred.SecretValue)
+        try {
+            $secretValueText = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+        }
+        finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+            $cred = [PSCustomObject]@{
+                VaultName = $kvCred.VaultName
+                UserName  = $kvCred.Tags.login
+                Password  = $secretValueText
+                Tags      = ($kvCred.Tags.Keys | ForEach-Object { $_, $kvCred.Tags.Item($_) -join (':') }) -join ('; ')
+            }
+        }
+    }
+    else {
+        $cred = New-Object System.Management.Automation.PSCredential ($kvCred.Tags.login, $kvCred.SecretValue)
+    }
+    return $cred
 }
+function Get-AzKeyVaultSecretValue {
+    [cmdletbinding()]
+    param (
+        [Parameter(Mandatory = $true)][string]$VaultName,
+        [Parameter(Mandatory = $true)][string]$Name
+    )
+    $kvSecret = (Get-KeyVaultSecret -VaultName $VaultName -Name $Name).SecretValue
 
+    $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($kvSecret)
+    try {
+        $secretValueText = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+    }
+    finally {
+        [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+    }
+    return $secretValueText
+}
 function Get-AzKeyVaultAllLogins {
     param (
         [Parameter(Mandatory = $true)][string]$VaultName,
@@ -73,9 +116,15 @@ function Get-AzKeyVaultAllLogins {
     )
     $ContentType ??= '*'
     Get-AzKeyVaultSecret -VaultName $VaultName |
-    Where-Object { $_.ContentType -like $ContentType } |
     ForEach-Object {
-        $pass = (Get-AzKeyVaultSecret -VaultName $VaultName -Name $_.Name).SecretValueText
+        $kvCred = Get-AzKeyVaultSecret -VaultName $VaultName -Name $_.Name
+        $ssPtr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($kvCred.SecretValue)
+        try {
+            $pass = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($ssPtr)
+        }
+        finally {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ssPtr)
+        }
         $_ | Add-Member -MemberType NoteProperty -Name 'Password' -Value $pass -PassThru
     } |
     Select-Object -Property Name, @{Name = 'Login'; Expression = { $_.Tags.login } }, Password

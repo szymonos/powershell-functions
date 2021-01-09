@@ -35,8 +35,8 @@ catch {
 Get-Service -Name 'DiagTrack', 'dmwappushsvc', 'PcaSvc' -ErrorAction SilentlyContinue | Format-Table -AutoSize -Property Status, StartType, Name, DisplayName
 Get-Service -Name 'DiagTrack', 'dmwappushsvc', 'PcaSvc' -ErrorAction SilentlyContinue | ForEach-Object { Set-Service -Name $_.Name -StartupType Disabled; Stop-Service -Name $_.Name -Force }
 
-## Fix Excel - Unable to open https// <<PATH>> Cannot download the information you requested
 <#
+.LINK Fix Excel - Unable to open https// <<PATH>> Cannot download the information you requested
 https://docs.microsoft.com/en-us/office/troubleshoot/error-messages/cannot-locate-server-when-click-hyperlink
 #>
 try {
@@ -45,6 +45,16 @@ try {
     New-Item -Path 'HKLM:\Software\Microsoft\Office\16.0\Common' -Name 'Internet'
 } finally {
     New-ItemProperty -Path 'HKLM:\Software\Microsoft\Office\16.0\Common\Internet' -Name ForceShellExecute -PropertyType DWord -Value 1 -ErrorAction SilentlyContinue
+}
+
+# *Fix Edge Chromium not working with Symantec Endpoint
+try {
+    Get-Item 'HKLM:\SOFTWARE\Policies\Microsoft\Edge' -ErrorAction Stop
+} catch {
+    New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft' -Name 'Edge' | Out-Null
+} finally {
+    New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Edge' -Name 'RendererCodeIntegrityEnabled' -PropertyType DWord -Value 0 -ErrorAction SilentlyContinue
+    # Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Edge' -Name 'RendererCodeIntegrityEnabled' -Value 0
 }
 
 ## Manage user autorun
@@ -60,6 +70,11 @@ Set-Location 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319'
 
 ## Show seconds in taskbar clock
 New-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'ShowSecondsInSystemClock' -PropertyType DWord -Value 1 -Force
+taskkill.exe /F /IM explorer.exe; Start-Process explorer.exe
+
+## Turn off Fast Startup
+Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name 'HiberbootEnabled'
+Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name 'HiberbootEnabled' -Value 0
 taskkill.exe /F /IM explorer.exe; Start-Process explorer.exe
 
 ## Turn off hibernation

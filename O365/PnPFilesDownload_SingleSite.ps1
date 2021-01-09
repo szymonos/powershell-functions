@@ -11,7 +11,7 @@ Get-InstalledModule -Name SharePointPnPPowerShellOnline | Select-Object *
 #>
 
 #Set Parameters
-$TenantSiteURL = 'https://abcdata.sharepoint.com'
+$TenantSiteURL = 'https://contoso.sharepoint.com'
 $SiteRelativeURL = '/sites/SBS'
 $LibraryName = 'Shared Documents' #Path in address bar, not the library Name
 $rootDir = 'D:\Migration\Teams'

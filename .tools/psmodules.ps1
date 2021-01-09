@@ -15,6 +15,9 @@ Uninstall-Module -Name $module.Name -AllowPrerelease -RequiredVersion $module.Ve
 # Get commands in module
 Get-Command -Module Az.Resources
 
+# Get module path
+(Get-Module oh-my-posh).ModuleBase
+
 # Check powershell version
 $PSVersionTable
 
@@ -23,6 +26,7 @@ code $Profile.CurrentUserCurrentHost
 code $Profile.CurrentUserAllHosts
 code $Profile.AllUsersCurrentHost
 code $Profile.AllUsersAllHosts
+code $profile  # in Linux
 
 # List all environment variables
 Get-ChildItem Env:
@@ -43,14 +47,13 @@ Remove-Item Env:\MyTestVariable
 # Set PSModulePath environment variable
 $userModulePath = "$($env:APPDATA)\PowerShell\Modules"
 if (!(Test-Path $userModulePath)) { New-Item $userModulePath -ItemType Directory -Force }
-$modulePath = $userModulePath, ([Environment]::GetEnvironmentVariable('PSModulePath', 'Process')) -join (';')
-[Environment]::SetEnvironmentVariable('PSModulePath', $modulePath, 'Process')
+$modulePath = $userModulePath, ([Environment]::GetEnvironmentVariable('PSModulePath', 'Machine')) -join (';')
+[Environment]::SetEnvironmentVariable('PSModulePath', $modulePath, 'Machine')
 
 # Remove path from env
-$remPath = 'C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\130\Tools\Binn\'
-$p = [Environment]::GetEnvironmentVariable('Path', 'Process') -split(';') | Where-Object {$_ -ne $remPath}
-[Environment]::SetEnvironmentVariable('Path', ($p -join(';')), 'Process')
+$remPath = 'C:\Python38\Scripts\'
+$p = [Environment]::GetEnvironmentVariable('Path', 'Machine') -split(';') | Where-Object {$_ -notlike $remPath}
+# $p = [Environment]::GetEnvironmentVariable('Path', 'Machine') -split(';') | Select-Object -Unique
+[Environment]::SetEnvironmentVariable('Path', ($p -join(';')), 'Machine')
 
-## Install module for all users in "$env:ProgramFiles\PowerShell\Modules" location
-<# https://docs.microsoft.com/en-us/powershell/module/powershellget/install-module?view=powershell-7#parameters #>
-Install-Module Az -Scope AllUsers -AllowClobber
+RefreshEnv.cmd

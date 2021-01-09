@@ -4,7 +4,6 @@ Remove merged branches from local git repo
 .EXAMPLE
 .tools\.submodules\GitRemoveBranches.ps1
 .tools\.submodules\GitRemoveBranches.ps1 -Branch 'dev'
-.tools\.submodules\GitRemoveBranches.ps1 -RepoFolder 'C:\Source\Repos\BiznesLink' -IncludeRemote
 .tools\.submodules\GitRemoveBranches.ps1 -DelBranches
 .tools\.submodules\GitRemoveBranches.ps1 -DelBranches -Branch 'dev'
 .tools\.submodules\GitRemoveBranches.ps1 -IncludeRemote
@@ -23,7 +22,7 @@ param (
 # Include functions
 . '.include\func_forms.ps1'
 
-$RepoFolder ??= Get-Folder -InitialDirectory 'C:\Source\Repos'
+$RepoFolder = Get-Folder -InitialDirectory 'C:\Source\Repos'
 if ($RepoFolder -eq 'C:\Source\Repos\') { break }
 
 $currentLocation = Get-Location

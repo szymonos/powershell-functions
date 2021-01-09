@@ -6,18 +6,22 @@ Manage Network
 #>
 
 # Get network adapters
-Get-NetAdapter -Physical | Where-Object Status -eq 'up'
-Get-NetAdapter | Where-Object Status -eq 'up'
+Get-NetAdapter -Physical | Where-Object Status -EQ 'up'
+Get-NetAdapter | Where-Object Status -EQ 'up'
 
 # Get local IP adresses
 Get-NetIPAddress -AddressFamily IPv4 | Format-Table -AutoSize -Property PrefixOrigin, InterfaceIndex, InterfaceAlias, IPAddress, PrefixLength
+Get-NetIPConfiguration -InterfaceIndex 11
 
 if ($run) {
     # Get public IP
-    $ip = Invoke-RestMethod -Uri 'http://ifconfig.me/ip'; $ip
+    $ip = Invoke-RestMethod -Uri 'https://ifconfig.me/ip'; $ip
+    curl 'https://ifconfig.me/ip'
+    $ip = Invoke-RestMethod -Uri 'http://ifconfig.me/forwarded'; $ip
+    Invoke-RestMethod -Uri 'http://ifconfig.me/all.json'
 
     # Manage IPv4
-    $ethName = Get-NetAdapter -InterfaceIndex 13 | Select-Object -ExpandProperty Name
+    $ethName = Get-NetAdapter -InterfaceIndex 14 | Select-Object -ExpandProperty Name
     $ipAddress = '10.10.10.55'
     New-NetIPAddress -InterfaceAlias $ethName -IPAddress $ipAddress -AddressFamily IPv4 -PrefixLength 24
 
@@ -29,6 +33,7 @@ if ($run) {
     $dnsAddresses = '8.8.8.8', '8.8.4.4'    # Google
     $dnsAddresses = '1.1.1.1', '1.0.0.1'    # Cloudflare
     Set-DnsClientServerAddress -InterfaceAlias $ethName -ServerAddresses $dnsAddresses
+    Get-DnsClientServerAddress
 
     Get-NetIPConfiguration -InterfaceAlias $ethName
 
@@ -41,7 +46,21 @@ if ($run) {
     $ping.Send('google.com').Address.IPAddressToString
 
     # Resolve name and check connection
-    Resolve-DnsName also-ecom.database.windows.net
-    Test-Connection 40.68.37.158 -TcpPort 1433
-    Test-NetConnection 40.68.37.158 -Port 1433 # Import-Module NetTCPIP
+    Resolve-DnsName my-db.database.windows.net
 }
+
+# *check connectivity to Azure SQL Servers
+foreach ($ip in ('52.236.184.163', '104.40.168.105')) {
+    Test-Connection $ip -TcpPort 1433
+}
+
+<# *Set up a Hyper-V NAT network
+.LINK
+https://docs.microsoft.com/en-us/virtualization/hyper-v-on-windows/user-guide/setup-nat-network
+#>
+New-VMSwitch -SwitchName "NAT Network" -SwitchType Internal
+Get-NetAdapter  # 53
+New-NetIPAddress -IPAddress 192.168.0.1 -PrefixLength 24 -InterfaceIndex 53
+New-NetNat -Name 'VMNAT' -InternalIPInterfaceAddressPrefix 192.168.0.0/24
+Get-NetNat
+Get-NetIPAddress -InterfaceIndex 53

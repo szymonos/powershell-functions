@@ -29,13 +29,12 @@
         "eamodio.gitlens",
         "tyriar.shell-launcher",
         "dunstontc.dark-plus-syntax",
-        "foxundermoon.shell-format",
         "aaron-bond.better-comments",
         "mechatroner.rainbow-csv"
     ],
 
     // Use 'postCreateCommand' to run commands after the container is created.
-    "postCreateCommand": "sh -c '$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)' && sh -c ",
+    // "postCreateCommand": "pwsh -c 'Set-PSReadLineOption -PredictionSource History'",
     // "postCreateCommand": "dotnet restore",
     // "postCreateCommand": "pwsh -c './pysetup.ps1 -Venv'"
 
