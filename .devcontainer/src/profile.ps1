@@ -36,18 +36,19 @@ function Prompt {
     } else {
         [Console]::Write("`e[31m`u{279C}`e[0m ")
     }
-    [Console]::Write("`e[1m`e[34m$promptPath ")
+    [Console]::Write("`e[1m`e[34m{0} ", $promptPath)
     try {
         # show git branch name
-        if ($branch = git branch --show-current 2>$null) {
+        if ($gstatus = git status -b --porcelain=v1 2>$null) {
             [Console]::Write("`e[96m(")
             # format branch name color depending on git diff status
-            if (git diff --raw) {
+            if($gstatus.Count -gt 1) {
                 [Console]::Write("`e[91m")  # red
             } else {
                 [Console]::Write("`e[92m")  # green
             }
-            [Console]::Write("$branch`e[96m)")
+            $branch = $gstatus[0].Split(' ')[1].Split('.')[0]
+            [Console]::Write("{0}`e[96m)", $branch)
         }
     } catch { }
     return "`e[0m$ "
