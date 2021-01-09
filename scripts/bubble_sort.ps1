@@ -2,7 +2,7 @@
 .SYNOPSIS
 Sort list using bubble sort algorithm.
 .EXAMPLE
-scripts/BubbleSort.ps1
+scripts/bubble_sort.ps1
 #>
 function Invoke-BubbleSort ([array]$array) {
     $start = Get-Date
@@ -16,7 +16,7 @@ function Invoke-BubbleSort ([array]$array) {
             }
         }
     }
-    "`e[92mElapsed time: $(New-TimeSpan -Start $start -End (Get-Date))`e[0m"
+    [Console]::WriteLine("`e[92mElapsed time: $((Get-Date) - $start)`e[0m")
     return $lst
 }
 

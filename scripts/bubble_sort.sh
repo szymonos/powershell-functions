@@ -2,7 +2,7 @@
 : '
 Bubble sort algorithm implementation.
 
-bash scripts/BubbleSort.sh
+bash scripts/bubble_sort.sh
 '
 
 bubble_sort() {
