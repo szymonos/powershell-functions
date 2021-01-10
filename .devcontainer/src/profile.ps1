@@ -10,7 +10,7 @@ code $Profile.CurrentUserAllHosts
 # make PowerShell console Unicode (UTF-8) aware
 $OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 # enable predictive suggestion feature in PSReadLine
-Set-PSReadLineOption -PredictionSource History -ErrorAction 'SilentlyContinue'
+try { Set-PSReadLineOption -PredictionSource History } catch {}
 function Prompt {
     $execStatus = $?
     # format execution time of the last command
@@ -52,6 +52,6 @@ function Prompt {
             }
             [Console]::Write("{0}`e[96m)", $branch)
         }
-    } catch { }
+    } catch {}
     return "`e[0m{0} " -f ('>' * ($nestedPromptLevel + 1))
 }
