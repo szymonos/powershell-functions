@@ -7,6 +7,7 @@ https://github.com/PowerShell/PSReadLine
 Install-Module PSReadLine -AllowPrerelease -Force
 code $Profile.CurrentUserAllHosts
 #>
+# make PowerShell console Unicode (UTF-8) aware
 $OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 # enable predictive suggestion feature in PSReadLine
 Set-PSReadLineOption -PredictionSource History -ErrorAction 'SilentlyContinue'
@@ -28,7 +29,7 @@ function Prompt {
         "0 ms"
     }
     # show only current folder or ~ in home directory as prompt path
-    $promptPath = if ($PWD.ToString() -eq $env:USERPROFILE) { '~' } else { Split-Path $PWD -Leaf }
+    $promptPath = if ($PWD.ToString() -eq $HOME) { '~' } else { Split-Path $PWD -Leaf }
     [Console]::Write("[`e[1m`e[38;2;99;143;79m{0}`e[0m]", $executionTime)
     # set arrow color depending on last command execution status
     if($execStatus) {
@@ -41,15 +42,16 @@ function Prompt {
         # show git branch name
         if ($gstatus = git status -b --porcelain=v1 2>$null) {
             [Console]::Write("`e[96m(")
-            # format branch name color depending on git diff status
-            if($gstatus.Count -gt 1) {
-                [Console]::Write("`e[91m")  # red
-            } else {
+            # format branch name color depending on working tree status
+            if($gstatus.Count -eq 1) {
+                $branch = $gstatus.Split(' ')[1].Split('.')[0]
                 [Console]::Write("`e[92m")  # green
+            } else {
+                $branch = $gstatus[0].Split(' ')[1].Split('.')[0]
+                [Console]::Write("`e[91m")  # red
             }
-            $branch = $gstatus[0].Split(' ')[1].Split('.')[0]
             [Console]::Write("{0}`e[96m)", $branch)
         }
     } catch { }
-    return "`e[0m$ "
+    return "`e[0m{0} " -f ('>' * ($nestedPromptLevel + 1))
 }
