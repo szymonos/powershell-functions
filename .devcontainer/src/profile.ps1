@@ -37,11 +37,11 @@ function Prompt {
     } else {
         [Console]::Write("`e[31m`u{279C}`e[0m ")
     }
-    [Console]::Write("`e[1m`e[34m{0} ", $promptPath)
+    [Console]::Write("`e[1m`e[34m{0}", $promptPath)
     try {
         # show git branch name
         if ($gstatus = git status -b --porcelain=v1 2>$null) {
-            [Console]::Write("`e[96m(")
+            [Console]::Write(" `e[96m(")
             # format branch name color depending on working tree status
             if($gstatus.Count -eq 1) {
                 $branch = $gstatus.Split(' ')[1].Split('.')[0]
