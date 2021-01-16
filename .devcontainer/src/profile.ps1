@@ -32,7 +32,7 @@ function Prompt {
     $promptPath = if ($PWD.ToString() -eq $HOME) { '~' } else { Split-Path $PWD -Leaf }
     [Console]::Write("[`e[1m`e[38;2;99;143;79m{0}`e[0m]", $executionTime)
     # set arrow color depending on last command execution status
-    if($execStatus) {
+    if ($execStatus) {
         [Console]::Write("`e[36m`u{279C}`e[0m ")
     } else {
         [Console]::Write("`e[31m`u{279C}`e[0m ")
@@ -40,18 +40,27 @@ function Prompt {
     [Console]::Write("`e[1m`e[34m{0}", $promptPath)
     try {
         # show git branch name
-        if ($gstatus = git status -b --porcelain=v1 2>$null) {
+        if ([array]$gstatus = git status -b --porcelain=v1 2>$null) {
             [Console]::Write(" `e[96m(")
-            # format branch name color depending on working tree status
-            if($gstatus.Count -eq 1) {
-                $branch = $gstatus.Split(' ')[1].Split('.')[0]
-                [Console]::Write("`e[92m")  # green
+            # parse branch name
+            if ($gstatus[0] -like '## No commits yet*') {
+                $branch = $gstatus[0].Split(' ')[5]
             } else {
                 $branch = $gstatus[0].Split(' ')[1].Split('.')[0]
+            }
+            # format branch name color depending on working tree status
+            if ($gstatus.Count -eq 1) {
+                [Console]::Write("`e[92m")  # green
+            } else {
                 [Console]::Write("`e[91m")  # red
             }
             [Console]::Write("{0}`e[96m)", $branch)
         }
-    } catch {}
+    }
+    catch {}
     return "`e[0m{0} " -f ('>' * ($nestedPromptLevel + 1))
 }
+# PowerShell startup information
+Clear-Host
+Write-Output ('PowerShell ' + $PSVersionTable.PSVersion.ToString())
+Write-Output ('BootUp: ' + (Get-Uptime -Since).ToString() + ' | Uptime: ' + (Get-Uptime).ToString())
