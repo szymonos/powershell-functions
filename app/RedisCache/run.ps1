@@ -1,6 +1,15 @@
 <#
 .SYNOPSIS
 Function for scaling Azure Redis Cache.
+.EXAMPLE POST method body
+$Request = '{
+    "Body": {
+        "ResourceGroupName": "RG-RedisCache",
+        "CacheName": "redis-cache-prod",
+        "ScaleDown": false,
+        "DestSize": "26GB"
+    }
+}' | ConvertFrom-Json
 #>
 
 using namespace System.Net
@@ -19,20 +28,15 @@ $mem = (Get-AzMetric -ResourceId $cacheProp.Id -MetricName 'usedmemory' -StartTi
 if ($Request.Body.ScaleDown) {
     $Request.Body.DestSize = if ($null -eq $mem.UsedGB) {
         $doScale = $false
-    }
-    elseif ($mem.UsedGB -lt 2.5) {
+    } elseif ($mem.UsedGB -lt 2.5) {
         '2.5GB'
-    }
-    elseif ($mem.UsedGB -lt 6) {
+    } elseif ($mem.UsedGB -lt 6) {
         '6GB'
-    }
-    elseif ($mem.UsedGB -lt 13) {
+    } elseif ($mem.UsedGB -lt 13) {
         '13GB'
-    }
-    elseif ($mem.UsedGB -lt 26) {
+    } elseif ($mem.UsedGB -lt 26) {
         '26GB'
-    }
-    else {
+    } else {
         $doScale = $false
     }
 
@@ -41,16 +45,13 @@ if ($Request.Body.ScaleDown) {
     }
 }
 
-$size = [math]::round($mem.UsedGB, 1)
-
 if ($doScale) {
     $response = Set-AzRedisCache -ResourceGroupName $Request.Body.ResourceGroupName -Name $Request.Body.CacheName -Size $Request.Body.DestSize
     Write-Host (ConvertTo-Json $response)
     $statusCode = [HttpStatusCode]::OK
-}
-else {
+} else {
     $response = $null
-    Write-Host 'Scaling not required.'
+    Write-Host "Scaling not required."
     $statusCode = [HttpStatusCode]::NoContent
 }
 
