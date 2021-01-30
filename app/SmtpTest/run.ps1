@@ -1,11 +1,13 @@
 <#
 .SYNOPSIS
-Function for sending emails through specified smtp gateway.
+Function for testing smtp gateway.
 .EXAMPLE POST method body
 $Request = '{
     "Body": {
-        "Recipient": "szymon.osiecki@also.com",
-        "Message": "Test",
+        "SmtpGtw": "SmtpGtw",
+        "Recipient": "szymonos@contoso.com",
+        "Subject": "Smtp test from function",
+        "Message": "Test."
     }
 }' | ConvertFrom-Json
 #>
@@ -16,12 +18,17 @@ param($Request, $TriggerMetadata)
 
 $ErrorActionPreference = 'Stop'
 # Write to the Azure Functions log stream.
-Write-Host "PowerShell HTTP trigger function processed a request."
+Write-Host 'PowerShell HTTP trigger function processed a request.'
 
 try {
-    $response = Send-MailMessage -SmtpServer SmtpGtw -Port 25 -From 'szymonos@contoso.com' -To $Request.Body.Recipient -Subject SmtpTest -Body $Request.Body.Message
-}
-catch {
+    $response = Send-MailMessage `
+        -SmtpServer $Request.Body.SmtpGtw `
+        -Port 25 `
+        -From "smtpgtw@$($Request.Body.Recipient.Split('@')[1])" `
+        -To $Request.Body.Recipient `
+        -Subject $Request.Body.Subject `
+        -Body $Request.Body.Message
+} catch {
     $response = $_.Exception.Message
 }
 

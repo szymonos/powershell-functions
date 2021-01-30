@@ -9,6 +9,8 @@ code $Profile.CurrentUserAllHosts
 #>
 # make PowerShell console Unicode (UTF-8) aware
 $OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding
+# Set variable for startup location
+$StartupLocation = $PWD
 # enable predictive suggestion feature in PSReadLine
 try { Set-PSReadLineOption -PredictionSource History } catch {}
 function Prompt {
@@ -28,8 +30,19 @@ function Prompt {
     } else {
         "0 ms"
     }
-    # show only current folder or ~ in home directory as prompt path
-    $promptPath = if ($PWD.ToString() -eq $HOME) { '~' } else { Split-Path $PWD -Leaf }
+    # set visible prompt path
+    $PwdStr = $PWD.ToString()
+    $promptPath = if ($PwdStr -eq $HOME) {
+        # show ~ in home directory
+        '~'
+    } else {
+        # show only parent\current directory for paths with depth greater than 2
+        if ($PwdStr.Split([System.IO.Path]::DirectorySeparatorChar).Count -gt 3) {
+            '...' + $PwdStr.Replace((Split-Path(Split-Path($PwdStr))), '')
+        } else {
+            $PwdStr
+        }
+    }
     [Console]::Write("[`e[1m`e[38;2;99;143;79m{0}`e[0m]", $executionTime)
     # set arrow color depending on last command execution status
     if ($execStatus) {
@@ -60,7 +73,21 @@ function Prompt {
     catch {}
     return "`e[0m{0} " -f ('>' * ($nestedPromptLevel + 1))
 }
+function Get-CmdletAlias ($cmdletname) {
+    <#.SYNOPSIS
+    Gets the aliases for any cmdlet.#>
+    Get-Alias |
+    Where-Object -FilterScript { $_.Definition -like "*$cmdletname*" } |
+    Sort-Object -Property Definition, Name |
+    Select-Object -Property Definition, Name
+}
+function Set-StartupLocation {
+    <#.SYNOPSIS
+    Sets the current working location to a startup location.#>
+    Set-Location $StartupLocation
+}
+Set-Alias -Name cds -Value Set-StartupLocation
 # PowerShell startup information
 Clear-Host
-Write-Output ('PowerShell ' + $PSVersionTable.PSVersion.ToString())
-Write-Output ('BootUp: ' + (Get-Uptime -Since).ToString() + ' | Uptime: ' + (Get-Uptime).ToString())
+"PowerShell $($PSVersionTable.PSVersion)"
+"BootUp: $((Get-Uptime -Since).ToString()) | Uptime: $(Get-Uptime)"

@@ -3,9 +3,9 @@
 Function for testing connectivity from deployed function.
 .EXAMPLE POST method body
 $Request = '{
-    "Body": {
-        "Name": "google.com",
-        "Port": 443
+    "Query": {
+        "name": "google.com",
+        "port": 443
     }
 }' | ConvertFrom-Json
 #>
@@ -19,26 +19,25 @@ $ErrorActionPreference = 'Stop'
 Write-Host "PowerShell HTTP trigger function processed a request."
 
 try {
-    $hostEntry = [Net.DNS]::GetHostEntry($Request.Body.Name)
+    $hostEntry = [Net.DNS]::GetHostEntry($Request.Query.name)
     $resolve = foreach ($address in $hostEntry.AddressList) {
-        [PSCustomObject]@{
-            HostName  = $hostEntry.HostName
-            IPAddress = $address.IPAddressToString
-        }
+        [PSCustomObject]@{HostName = $hostEntry.HostName; IPAddress = $address.IPAddressToString }
     }
 } catch {
     $resolve = $_.Exception.Message
 }
 
 try {
-    $connection = Test-Connection $Request.Body.Name -TcpPort $Request.Body.Port
+$connection = New-Object System.Net.Sockets.TcpClient($Request.Query.name, $Request.Query.port)
+$reachable = $connection.Connected
+    $connection.Close()
 } catch {
-    $connection = $_.Exception.Message
+    $reachable = $_.Exception.Message
 }
 
 $response = [ordered]@{
     'ResolveDnsName' = $resolve
-    'TriggerState'   = [PSCustomObject]@{Target="$($Request.Body.Name):$($Request.Body.Port)"; Reachable=$connection}
+    'TestConnection'   = [PSCustomObject]@{Target = "$($resolve.IPAddress):$($Request.Query.port)"; Reachable = $reachable }
 }
 
 Write-Host (ConvertTo-Json $response)
