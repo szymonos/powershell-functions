@@ -9,8 +9,8 @@ code $Profile.CurrentUserAllHosts
 #>
 # make PowerShell console Unicode (UTF-8) aware
 $OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding
-# Set variable for startup location
-$StartupLocation = $PWD
+# set variable for Startup Working Directory
+$SWD = $PWD.Path
 # enable predictive suggestion feature in PSReadLine
 try { Set-PSReadLineOption -PredictionSource History } catch {}
 function Prompt {
@@ -30,17 +30,16 @@ function Prompt {
     } else {
         "0 ms"
     }
-    # set visible prompt path
-    $PwdStr = $PWD.ToString()
-    $promptPath = if ($PwdStr -eq $HOME) {
+    # set prompt path
+    $promptPath = if ($PWD.Path -eq $HOME) {
         # show ~ in home directory
         '~'
     } else {
         # show only parent\current directory for paths with depth greater than 2
-        if ($PwdStr.Split([System.IO.Path]::DirectorySeparatorChar).Count -gt 3) {
-            '...' + $PwdStr.Replace((Split-Path(Split-Path($PwdStr))), '')
+        if ($PWD.Path.Split([System.IO.Path]::DirectorySeparatorChar).Count -gt 3) {
+            '...' + $PWD.Path.Replace((Split-Path(Split-Path($PWD.Path))), '')
         } else {
-            $PwdStr
+            $PWD.Path
         }
     }
     [Console]::Write("[`e[1m`e[38;2;99;143;79m{0}`e[0m]", $executionTime)
@@ -83,8 +82,8 @@ function Get-CmdletAlias ($cmdletname) {
 }
 function Set-StartupLocation {
     <#.SYNOPSIS
-    Sets the current working location to a startup location.#>
-    Set-Location $StartupLocation
+    Sets the current working location to the startup working directory.#>
+    Set-Location $SWD
 }
 Set-Alias -Name cds -Value Set-StartupLocation
 # PowerShell startup information
