@@ -31,16 +31,15 @@ function Prompt {
         "0 ms"
     }
     # set prompt path
-    $promptPath = if ($PWD.Path -eq $HOME) {
-        # show ~ in home directory
-        '~'
-    } else {
-        # show only parent\current directory for paths with depth greater than 2
-        if ($PWD.Path.Split([System.IO.Path]::DirectorySeparatorChar).Count -gt 3) {
-            '...' + $PWD.Path.Replace((Split-Path(Split-Path($PWD.Path))), '')
+    $promptPath = $PWD.Path.Replace($HOME, '~').Replace('Microsoft.PowerShell.Core\FileSystem::', '') -replace '\\$', ''
+    $split = $promptPath.Split([System.IO.Path]::DirectorySeparatorChar)
+    if ($split.Count -gt 3) {
+        $prefix = if ($split[0] -eq '~') {
+            "~$([System.IO.Path]::DirectorySeparatorChar)..."
         } else {
-            $PWD.Path
+            "..."
         }
+        $promptPath = $prefix + $([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::Join($split[-2], $split[-1])
     }
     [Console]::Write("[`e[1m`e[38;2;99;143;79m{0}`e[0m]", $executionTime)
     # set arrow color depending on last command execution status
@@ -68,8 +67,7 @@ function Prompt {
             }
             [Console]::Write("{0}`e[96m)", $branch)
         }
-    }
-    catch {}
+    } catch {}
     return "`e[0m{0} " -f ('>' * ($nestedPromptLevel + 1))
 }
 function Get-CmdletAlias ($cmdletname) {
