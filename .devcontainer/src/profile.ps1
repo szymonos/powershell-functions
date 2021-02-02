@@ -34,8 +34,7 @@ function Prompt {
     $promptPath = $PWD.Path.Replace($HOME, '~').Replace('Microsoft.PowerShell.Core\FileSystem::', '') -replace '\\$', ''
     $split = $promptPath.Split([System.IO.Path]::DirectorySeparatorChar)
     if ($split.Count -gt 3) {
-        $prefix = ($split[0] -eq '~') ? '~' : $null
-        $promptPath = [System.IO.Path]::Join($prefix, '...', $split[-2], $split[-1])
+        $promptPath = [System.IO.Path]::Join((($split[0] -eq '~') ? '~' : $null), '...', $split[-2], $split[-1])
     }
     [Console]::Write("[`e[1m`e[38;2;99;143;79m{0}`e[0m]", $executionTime)
     # set arrow color depending on last command execution status
@@ -43,7 +42,7 @@ function Prompt {
     [Console]::Write("`u{279C} `e[1m`e[34m{0}", $promptPath)
     try {
         # show git branch name
-        if ([array]$gstatus = git status -b --porcelain=v1 2>$null) {
+        if ($gstatus = [string[]]@(git status -b --porcelain=v1 2>$null)) {
             [Console]::Write(" `e[96m(")
             # parse branch name
             if ($gstatus[0] -like '## No commits yet*') {
