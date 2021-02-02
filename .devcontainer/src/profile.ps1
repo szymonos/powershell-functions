@@ -34,21 +34,13 @@ function Prompt {
     $promptPath = $PWD.Path.Replace($HOME, '~').Replace('Microsoft.PowerShell.Core\FileSystem::', '') -replace '\\$', ''
     $split = $promptPath.Split([System.IO.Path]::DirectorySeparatorChar)
     if ($split.Count -gt 3) {
-        $prefix = if ($split[0] -eq '~') {
-            "~$([System.IO.Path]::DirectorySeparatorChar)..."
-        } else {
-            "..."
-        }
-        $promptPath = $prefix + $([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::Join($split[-2], $split[-1])
+        $prefix = ($split[0] -eq '~') ? '~' : $null
+        $promptPath = [System.IO.Path]::Join($prefix, '...', $split[-2], $split[-1])
     }
     [Console]::Write("[`e[1m`e[38;2;99;143;79m{0}`e[0m]", $executionTime)
     # set arrow color depending on last command execution status
-    if ($execStatus) {
-        [Console]::Write("`e[36m`u{279C}`e[0m ")
-    } else {
-        [Console]::Write("`e[31m`u{279C}`e[0m ")
-    }
-    [Console]::Write("`e[1m`e[34m{0}", $promptPath)
+    $execStatus ? [Console]::Write("`e[36m") : [Console]::Write("`e[31m")
+    [Console]::Write("`u{279C} `e[1m`e[34m{0}", $promptPath)
     try {
         # show git branch name
         if ([array]$gstatus = git status -b --porcelain=v1 2>$null) {
@@ -60,11 +52,7 @@ function Prompt {
                 $branch = $gstatus[0].Split(' ')[1].Split('.')[0]
             }
             # format branch name color depending on working tree status
-            if ($gstatus.Count -eq 1) {
-                [Console]::Write("`e[92m")  # green
-            } else {
-                [Console]::Write("`e[91m")  # red
-            }
+            ($gstatus.Count -eq 1) ? [Console]::Write("`e[92m") : [Console]::Write("`e[91m")
             [Console]::Write("{0}`e[96m)", $branch)
         }
     } catch {}
@@ -84,6 +72,8 @@ function Set-StartupLocation {
     Set-Location $SWD
 }
 Set-Alias -Name cds -Value Set-StartupLocation
+Set-Alias -Name which -Value Get-Command
+
 # PowerShell startup information
 Clear-Host
 "PowerShell $($PSVersionTable.PSVersion)"
