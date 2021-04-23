@@ -42,7 +42,7 @@ function Prompt {
     [Console]::Write("`u{279C} `e[1m`e[34m{0}", $promptPath)
     try {
         # show git branch name
-        if ($gstatus = [string[]]@(git status -b --porcelain=v1 2>$null)) {
+        if ($gstatus = [string[]]@(git status -b --porcelain=v1 2>$null)[0..1]) {
             [Console]::Write(" `e[96m(")
             # parse branch name
             if ($gstatus[0] -like '## No commits yet*') {
