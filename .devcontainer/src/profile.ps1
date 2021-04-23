@@ -32,9 +32,9 @@ function Prompt {
     }
     # set prompt path
     $promptPath = $PWD.Path.Replace($HOME, '~').Replace('Microsoft.PowerShell.Core\FileSystem::', '') -replace '\\$', ''
-    $split = $promptPath.Split([System.IO.Path]::DirectorySeparatorChar)
+    $split = $promptPath.Split([IO.Path]::DirectorySeparatorChar)
     if ($split.Count -gt 3) {
-        $promptPath = [System.IO.Path]::Join((($split[0] -eq '~') ? '~' : $null), '...', $split[-2], $split[-1])
+        $promptPath = [IO.Path]::Join((($split[0] -eq '~') ? '~' : $null), '...', $split[-2], $split[-1])
     }
     [Console]::Write("[`e[1m`e[38;2;99;143;79m{0}`e[0m]", $executionTime)
     # set arrow color depending on last command execution status
@@ -65,13 +65,18 @@ function Get-CmdletAlias ($cmdletname) {
     Sort-Object -Property Definition, Name |
     Select-Object -Property Definition, Name
 }
+function Get-CommandSource ($cmdname) {
+    <#.SYNOPSIS
+    Gets the source directory for command.#>
+    (Get-Command $cmdname).Source
+}
+Set-Alias -Name which -Value Get-CommandSource
 function Set-StartupLocation {
     <#.SYNOPSIS
     Sets the current working location to the startup working directory.#>
     Set-Location $SWD
 }
 Set-Alias -Name cds -Value Set-StartupLocation
-Set-Alias -Name which -Value Get-Command
 
 # PowerShell startup information
 Clear-Host
