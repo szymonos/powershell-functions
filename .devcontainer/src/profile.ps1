@@ -34,7 +34,7 @@ function Prompt {
     $promptPath = $PWD.Path.Replace($HOME, '~').Replace('Microsoft.PowerShell.Core\FileSystem::', '') -replace '\\$', ''
     $split = $promptPath.Split([IO.Path]::DirectorySeparatorChar)
     if ($split.Count -gt 3) {
-        $promptPath = [IO.Path]::Join((($split[0] -eq '~') ? '~' : $null), '...', $split[-2], $split[-1])
+        $promptPath = [IO.Path]::Join((($split[0] -eq '~') ? '~' : "$($PWD.Drive.Name):"), '...', $split[-2], $split[-1])
     }
     [Console]::Write("[`e[1m`e[38;2;99;143;79m{0}`e[0m]", $executionTime)
     # set arrow color depending on last command execution status
