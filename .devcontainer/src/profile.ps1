@@ -40,7 +40,7 @@ function Prompt {
     $promptPath = $PWD.Path.Replace($HOME, '~').Replace('Microsoft.PowerShell.Core\FileSystem::', '') -replace '\\$', ''
     $split = $promptPath.Split([IO.Path]::DirectorySeparatorChar)
     if ($split.Count -gt 3) {
-        $promptPath = [IO.Path]::Join((($split[0] -eq '~') ? '~' : "$($PWD.Drive.Name):"), '...', $split[-2], $split[-1])
+        $promptPath = [IO.Path]::Join((($split[0] -eq '~') ? '~' : ($IsWindows ? "$($PWD.Drive.Name):" : '')), '...', $split[-2], $split[-1])
     }
     [Console]::Write("[`e[1m`e[38;2;99;143;79m{0}`e[0m]", $executionTime)
     # set arrow color depending on last command execution status
@@ -65,23 +65,26 @@ function Prompt {
 }
 
 function Get-CmdletAlias ($cmdletname) {
-    <#.SYNOPSIS
+    <#
+    .SYNOPSIS
     Gets the aliases for any cmdlet.#>
-    Get-Alias |
-        Where-Object -FilterScript { $_.Definition -match $cmdletname } |
-        Sort-Object -Property Definition, Name |
+    Get-Alias | `
+        Where-Object -FilterScript { $_.Definition -match $cmdletname } | `
+        Sort-Object -Property Definition, Name | `
         Select-Object -Property Definition, Name
 }
 
 function Get-CommandSource ($cmdname) {
-    <#.SYNOPSIS
+    <#
+    .SYNOPSIS
     Gets the source directory for command.#>
     (Get-Command $cmdname).Source
 }
 Set-Alias -Name which -Value Get-CommandSource
 
 function Set-StartupLocation {
-    <#.SYNOPSIS
+    <#
+    .SYNOPSIS
     Sets the current working location to the startup working directory.#>
     Set-Location $SWD
 }
@@ -96,7 +99,8 @@ function Get-DiskUsage {
         [Alias('a')][switch]$All,  # include hidden files and folders
         [Alias('s')][ValidateSet('size', 'count','name')][string]$Sort
     )
-    <#.SYNOPSIS
+    <#
+    .SYNOPSIS
     Gets summary size of files inside folders.#>
     # filter for size formatting
     filter formatSize {
@@ -122,7 +126,7 @@ function Get-DiskUsage {
         $items = Invoke-Expression $cmd
         $size = 0 + ($items | Measure-Object -Property Length -Sum).Sum
         $cnt = $items.Count
-        $relPath = Resolve-Path $dir -Relative
+        $relPath = $dir.Replace((Resolve-Path $Path.Replace('*', '.')).Path -replace ('\\$|/$', ''), '.')
         if ($Sort) {
             $result.Add([PSCustomObject]@{
                     Size  = $size
@@ -139,7 +143,8 @@ function Get-DiskUsage {
         }
     }
     if ($Sort) {
-        $result | Sort-Object -Property $Sort | Format-Table -HideTableHeaders @{Name = 'Size'; Expression = { $HumanReadable ? ($_.Size | formatSize) : ($_.Size) }; Align = 'Right' }, Count, Name
+        $result | Sort-Object -Property $Sort | `
+            Format-Table -HideTableHeaders @{Name = 'Size'; Expression = { $HumanReadable ? ($_.Size | formatSize) : ($_.Size) }; Align = 'Right' }, Count, Name
     }
 }
 Set-Alias -Name du -Value Get-DiskUsage
