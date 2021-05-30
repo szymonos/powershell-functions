@@ -93,7 +93,7 @@ Set-Alias -Name cds -Value Set-StartupLocation
 function Get-DiskUsage {
     [cmdletbinding()]
     param (
-        [Alias('p')][Parameter(Position = 0)][string]$Path = '*',
+        [Alias('p')][Parameter(Position = 0)][string]$Path = '.',
         [Alias('h')][switch]$HumanReadable,
         [Alias('r')][switch]$Recurse,
         [Alias('a')][switch]$All,  # include hidden files and folders
@@ -112,21 +112,22 @@ function Get-DiskUsage {
             Default { "$_.0B" }
         }
     }
-    if ($Recurse) {
-        $Path = $Path.Replace('*', '.')
-        $cmd = "Get-ChildItem '$Path' -Recurse -Directory$($All ? ' -Force' : '')"
-    } else {
-        $cmd = "Get-Item '$Path'$($All ? ' -Force' : '') | Where-Object { `$_.PSIsContainer }"
-    }
-    [Collections.Generic.List[string]]$dirs = (Invoke-Expression $cmd).FullName
-    if ($Recurse) { $dirs.Add((Resolve-Path $Path).Path) }
+
+    $startPath = Get-Item $Path
+    $enumDirs = [IO.EnumerationOptions]::new()
+    $enumFiles = [IO.EnumerationOptions]::new()
+    $enumDirs.RecurseSubdirectories = $Recurse
+    $enumFiles.RecurseSubdirectories = !$Recurse
+    $enumDirs.AttributesToSkip = $enumFiles.AttributesToSkip = $All ? 0 : 6
+
+    $dirs = $startPath.GetDirectories('*', $enumDirs)
+    if ($Recurse) { $dirs += $startPath }
     if ($Sort) { $result = [Collections.Generic.List[PSObject]]::new() }
     foreach ($dir in $dirs) {
-        $cmd = "Get-ChildItem '$dir' -File$($All ? ' -Force' : '')$($Recurse ? '' : ' -Recurse')"
-        $items = Invoke-Expression $cmd
+        $items = $dir.GetFiles('*', $enumFiles)
         $size = 0 + ($items | Measure-Object -Property Length -Sum).Sum
-        $cnt = $items.Count
-        $relPath = $dir.Replace((Resolve-Path $Path.Replace('*', '.')).Path -replace ('\\$|/$', ''), '.')
+        $cnt = ($items | Measure-Object).Count
+        $relPath = [IO.Path]::GetRelativePath($startPath.FullName, $dir.FullName)
         if ($Sort) {
             $result.Add([PSCustomObject]@{
                     Size  = $size
@@ -136,7 +137,7 @@ function Get-DiskUsage {
         } else {
             if ($HumanReadable) {
                 $size = $size | formatSize
-                "$(' ' * (6 - $size.Length))$size   $(' ' * (8 - $cnt.ToString().Length))$cnt   $relPath"
+                "$(' ' * (7 - $size.Length))$size   $(' ' * (8 - $cnt.ToString().Length))$cnt   $relPath"
             } else {
                 "$(' ' * (16 - $size.ToString().Length))$size   $(' ' * (8 - $cnt.ToString().Length))$cnt   $relPath"
             }
