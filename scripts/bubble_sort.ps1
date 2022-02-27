@@ -1,3 +1,4 @@
+#!/usr/bin/pwsh -nop
 <#
 .SYNOPSIS
 Sort list using bubble sort algorithm.
