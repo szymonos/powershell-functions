@@ -1,163 +1,123 @@
-<#
-.SYNOPSIS
-My PowerShell 7 profile. It uses updated PSReadLine module and git.
-.LINK
-https://github.com/PowerShell/PSReadLine
-.EXAMPLE
-Install-Module PSReadLine -AllowPrerelease -Force
-code $Profile.CurrentUserAllHosts
-#>
+#Requires -Version 7.2
+#Requires -Modules PSReadLine, posh-git
+
+#region startup settings
+# set culture to English Sweden for ISO-8601 datetime settings
+[Threading.Thread]::CurrentThread.CurrentCulture = 'en-SE'
+<# Import posh-git module for git autocompletion. Install module:
+Install-Module posh-git #>
+Import-Module posh-git; $GitPromptSettings.EnablePromptStatus = $false
 # make PowerShell console Unicode (UTF-8) aware
 $OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::new()
-
-# set variable for Startup Working Directory
+<# Change PSStyle for directory coloring. Enable coloring:
+Enable-ExperimentalFeature PSAnsiRenderingFileInfo #>
+$PSStyle.FileInfo.Directory = "$($PSStyle.Bold)$($PSStyle.Foreground.Blue)"
+<# Configure PSReadLine setting. Install module:
+Install-Module PSReadLine -AllowPrerelease -Force #>
+Set-PSReadLineOption -EditMode Emacs
+Set-PSReadLineOption -PredictionSource History -PredictionViewStyle ListView
+Set-PSReadLineKeyHandler -Chord Tab -Function MenuComplete
+Set-PSReadLineKeyHandler -Chord F2 -Function SwitchPredictionView
+Set-PSReadLineKeyHandler -Chord Shift+Tab -Function AcceptSuggestion
+Set-PSReadLineKeyHandler -Chord Alt+j -Function NextHistory
+Set-PSReadLineKeyHandler -Chord Alt+k -Function PreviousHistory
+# set Startup Working Directory variable
 $SWD = $PWD.Path
+#endregion
 
-# enable predictive suggestion feature in PSReadLine
-try {
-    Set-PSReadLineOption -PredictionSource History
-    Set-PSReadLineOption -PredictionViewStyle ListView
-} catch {}
+#region functions
+# navigation functions
+function cds { Set-Location $SWD }
+function .. { Set-Location .. }
+function ... { Set-Location ../.. }
+function .... { Set-Location ../../.. }
+function ..... { Set-Location ../../../.. }
 
-function Prompt {
-    $execStatus = $?
-    # format execution time of the last command
-    $executionTime = if ((Get-History).Count -gt 0) {
-        switch ((Get-History)[-1].Duration) {
-            { $_.TotalMilliseconds -lt 10 } { '{0:N3} ms' -f $_.TotalMilliseconds }
-            { $_.TotalMilliseconds -ge 10 -and $_.TotalMilliseconds -lt 100 } { '{0:N2} ms' -f $_.TotalMilliseconds }
-            { $_.TotalMilliseconds -ge 100 -and $_.TotalMilliseconds -lt 1000 } { '{0:N1} ms' -f $_.TotalMilliseconds }
-            { $_.TotalSeconds -ge 1 -and $_.TotalSeconds -lt 10 } { '{0:N3} s' -f $_.TotalSeconds }
-            { $_.TotalSeconds -ge 10 -and $_.TotalSeconds -lt 100 } { '{0:N2} s' -f $_.TotalSeconds }
-            { $_.TotalSeconds -ge 100 -and $_.TotalHours -le 1 } { $_.ToString('mm\:ss\.ff') }
-            { $_.TotalHours -ge 1 -and $_.TotalDays -le 1 } { $_.ToString('hh\:mm\:ss') }
-            { $_.TotalDays -ge 1 } { "$($_.Days * 24 + $_.Hours):$($_.ToString('mm\:ss'))" }
-        }
-    } else {
-        '0 ms'
-    }
-    # set prompt path
-    $promptPath = $PWD.Path.Replace($HOME, '~').Replace('Microsoft.PowerShell.Core\FileSystem::', '') -replace '\\$', ''
-    $split = $promptPath.Split([IO.Path]::DirectorySeparatorChar)
-    if ($split.Count -gt 3) {
-        $promptPath = [IO.Path]::Join((($split[0] -eq '~') ? '~' : ($IsWindows ? "$($PWD.Drive.Name):" : '')), '...', $split[-2], $split[-1])
-    }
-    [Console]::Write("[`e[1m`e[38;2;99;143;79m{0}`e[0m]", $executionTime)
-    # set arrow color depending on last command execution status
-    $execStatus ? [Console]::Write("`e[36m") : [Console]::Write("`e[31m")
-    [Console]::Write("`u{279C} `e[1m`e[34m{0}", $promptPath)
-    try {
-        # show git branch name
-        if ($gstatus = @(git status -b --porcelain=v1 2>$null)[0..1]) {
-            [Console]::Write(" `e[96m(")
-            # parse branch name
-            if ($gstatus[0] -match '^## No commits yet') {
-                $branch = $gstatus[0].Split(' ')[5]
-            } else {
-                $branch = $gstatus[0].Split(' ')[1].Split('.')[0]
-            }
-            # format branch name color depending on working tree status
-            ($gstatus.Count -eq 1) ? [Console]::Write("`e[92m") : [Console]::Write("`e[91m")
-            [Console]::Write("{0}`e[96m)", $branch)
-        }
-    } catch {}
-    return "`e[0m{0} " -f ('>' * ($nestedPromptLevel + 1))
+function ll {
+    $arguments = $args.ForEach({ $_ -match ' ' ? "'$_'" : $_ })
+    Invoke-Expression "Get-ChildItem $arguments -Force"
 }
 
-function Get-CmdletAlias ($cmdletname) {
+function src { . $PROFILE.CurrentUserAllHosts }
+
+function Format-Duration ([timespan]$TimeSpan) {
     <#
     .SYNOPSIS
-    Gets the aliases for any cmdlet.#>
+    Print timespan in human readable format.#>
+    switch ($TimeSpan) {
+        { $_.TotalMilliseconds -gt 0 -and $_.TotalMilliseconds -lt 10 } { '{0:N2}ms' -f $_.TotalMilliseconds }
+        { $_.TotalMilliseconds -ge 10 -and $_.TotalMilliseconds -lt 100 } { '{0:N1}ms' -f $_.TotalMilliseconds }
+        { $_.TotalMilliseconds -ge 100 -and $_.TotalMilliseconds -lt 1000 } { '{0:N0}ms' -f $_.TotalMilliseconds }
+        { $_.TotalSeconds -ge 1 -and $_.TotalSeconds -lt 10 } { '{0:N3}s' -f $_.TotalSeconds }
+        { $_.TotalSeconds -ge 10 -and $_.TotalSeconds -lt 100 } { '{0:N2}s' -f $_.TotalSeconds }
+        { $_.TotalSeconds -ge 100 -and $_.TotalHours -le 1 } { $_.ToString('mm\:ss\.ff') }
+        { $_.TotalHours -ge 1 -and $_.TotalDays -le 1 } { $_.ToString('hh\:mm\:ss') }
+        { $_.TotalDays -ge 1 } { "$($_.Days * 24 + $_.Hours):$($_.ToString('mm\:ss'))" }
+        Default { '0ms' }
+    }
+}
+
+function Get-CmdletAlias ([string]$cmdletname) {
+    <#
+    .SYNOPSIS
+    Get the aliases for any cmdlet.#>
     Get-Alias | `
         Where-Object -FilterScript { $_.Definition -match $cmdletname } | `
         Sort-Object -Property Definition, Name | `
         Select-Object -Property Definition, Name
 }
 
-function Get-CommandSource ($cmdname) {
-    <#
-    .SYNOPSIS
-    Gets the source directory for command.#>
-    (Get-Command $cmdname).Source
-}
-Set-Alias -Name which -Value Get-CommandSource
+# functions
+function Invoke-Sudo { & /usr/bin/env sudo pwsh -NoProfile -Command "& $args" }
+function grep { $input | & /usr/bin/env grep --color=auto $args }
+function ls { & /usr/bin/env ls --color=auto --time-style=long-iso --group-directories-first $args }
+function l { ls -1 }
+function la { ls -lAh }
+function lsa { ls -lah }
 
-function Set-StartupLocation {
-    <#
-    .SYNOPSIS
-    Sets the current working location to the startup working directory.#>
-    Set-Location $SWD
-}
-Set-Alias -Name cds -Value Set-StartupLocation
+#region aliases
+Set-Alias -Name gim -Value Get-InstalledModule
+Set-Alias -Name ga -Value Get-Alias
+Set-Alias -Name gca -Value Get-CmdletAlias
+Set-Alias _ Invoke-Sudo
+#endregion
 
-function Get-DiskUsage {
-    [cmdletbinding()]
-    param (
-        [Alias('p')][Parameter(Position = 0)][string]$Path = '.',
-        [Alias('h')][switch]$HumanReadable,
-        [Alias('r')][switch]$Recurse,
-        [Alias('a')][switch]$All,  # include hidden files and folders
-        [Alias('s')][ValidateSet('size', 'count','name')][string]$Sort
-    )
-    <#
-    .SYNOPSIS
-    Gets summary size of files inside folders.#>
-    # filter for size formatting
-    filter formatSize {
-        switch ($_) {
-            { $_ -ge 1KB -and $_ -lt 1MB } { '{0:0.0}K' -f ($_ / 1KB) }
-            { $_ -ge 1MB -and $_ -lt 1GB } { '{0:0.0}M' -f ($_ / 1MB) }
-            { $_ -ge 1GB -and $_ -lt 1TB } { '{0:0.0}G' -f ($_ / 1GB) }
-            { $_ -ge 1TB } { '{0:0.0}T' -f ($_ / 1TB) }
-            Default { "$_.0B" }
+#region prompt
+function Prompt {
+    $execStatus = $?
+    # get execution time of the last command
+    $executionTime = (Get-History).Count -gt 0 ? (Format-Duration(Get-History)[-1].Duration) : $null
+    # get prompt path
+    $promptPath = $PWD.Path.Replace($HOME, '~').Replace('Microsoft.PowerShell.Core\FileSystem::', '') -replace '\\$'
+    $split = $promptPath.Split([IO.Path]::DirectorySeparatorChar)
+    if ($split.Count -gt 3) {
+        $promptPath = [IO.Path]::Join((($split[0] -eq '~') ? '~' : ($IsWindows ? "$($PWD.Drive.Name):" : $split[1])), '..', $split[-1])
+    }
+    # write last execution time
+    if ($executionTime) {
+        [Console]::Write("[$($PSStyle.Foreground.BrightYellow)$executionTime$($PSStyle.Reset)] ")
+    }
+    # write last execution status
+    [Console]::Write("$($PSStyle.Bold){0}`u{2192} ", $execStatus ? $PSStyle.Foreground.BrightGreen : $PSStyle.Foreground.BrightRed)
+    # write prompt path
+    [Console]::Write("$($PSStyle.Foreground.Blue)$promptPath$($PSStyle.Reset) ")
+    # write git branch/status
+    try {
+        # get git status
+        $gstatus = @(git status -b --porcelain=v2 2>$null)[1..4]
+        if ($gstatus) {
+            # get branch name and upstream status
+            $branch = $gstatus[0].Split(' ')[2] + ($gstatus[1] -match 'branch.upstream' ? $null : " `u{21E1}")
+            # format branch name color depending on working tree status
+            [Console]::Write("{0}`u{E0A0}$branch ", ($gstatus | Select-String -Pattern '^(?!#)' -Quiet) ? "`e[38;2;255;146;72m" : "`e[38;2;212;170;252m")
         }
-    }
-
-    $startPath = Get-Item $Path
-    $enumDirs = [IO.EnumerationOptions]::new()
-    $enumFiles = [IO.EnumerationOptions]::new()
-    $enumDirs.RecurseSubdirectories = $Recurse
-    $enumFiles.RecurseSubdirectories = !$Recurse
-    $enumDirs.AttributesToSkip = $enumFiles.AttributesToSkip = $All ? 0 : 6
-
-    $dirs = $startPath.GetDirectories('*', $enumDirs)
-    if ($Recurse) { $dirs += $startPath }
-    if ($Sort) { $result = [Collections.Generic.List[PSObject]]::new() }
-    foreach ($dir in $dirs) {
-        $items = $dir.GetFiles('*', $enumFiles)
-        $size = 0 + ($items | Measure-Object -Property Length -Sum).Sum
-        $cnt = ($items | Measure-Object).Count
-        $relPath = [IO.Path]::GetRelativePath($startPath.FullName, $dir.FullName)
-        if ($Sort) {
-            $result.Add([PSCustomObject]@{
-                    Size  = $size
-                    Count = $cnt
-                    Name  = $relPath
-                })
-        } else {
-            if ($HumanReadable) {
-                $size = $size | formatSize
-                "$(' ' * (7 - $size.Length))$size   $(' ' * (8 - $cnt.ToString().Length))$cnt   $relPath"
-            } else {
-                "$(' ' * (16 - $size.ToString().Length))$size   $(' ' * (8 - $cnt.ToString().Length))$cnt   $relPath"
-            }
-        }
-    }
-    if ($Sort) {
-        $result | Sort-Object -Property $Sort | `
-            Format-Table -HideTableHeaders @{Name = 'Size'; Expression = { $HumanReadable ? ($_.Size | formatSize) : ($_.Size) }; Align = 'Right' }, Count, Name
-    }
+    } catch {}
+    return '{0}{1} ' -f ($PSStyle.Reset, '>' * ($nestedPromptLevel + 1))
 }
-Set-Alias -Name du -Value Get-DiskUsage
+#endregion
 
-# activate python virtual environment if exists
-$init = [IO.Path]::Combine('.vscode', 'init.ps1')
-if (Test-Path $init) { & $init }
-if ($IsLinux) {
-    Set-Alias -Name '.venv/bin/activate' -Value '.venv/bin/Activate.ps1'
-}
-
-# PowerShell startup information
-Clear-Host
-"PowerShell $($PSVersionTable.PSVersion)"
-"BootUp: $((Get-Uptime -Since).ToString()) | Uptime: $(Get-Uptime)"
+#region startup information
+"$($PSStyle.Foreground.BrightCyan)BootUp: $((Get-Uptime -Since).ToString('u')) | Uptime: $(Get-Uptime)$($PSStyle.Reset)"
+"$($PSStyle.Foreground.BrightWhite){0} | PowerShell $($PSVersionTable.PSVersion)$($PSStyle.Reset)" `
+    -f (Select-String -Pattern '^PRETTY_NAME=(.*)' -Path /etc/os-release).Matches.Groups[1].Value.Trim("`"|'")
+#endregion

@@ -6,8 +6,8 @@ Functions using methods from System.IO namespace
 #>
 [void] [System.Reflection.Assembly]::Load('System.IO.Compression.FileSystem')
 function Get-FileFromZip {
+    [cmdletbinding()]
     param(
-        [cmdletbinding()]
         [ValidateScript( { Test-Path $_ -PathType 'Leaf' } )][string]$ZipFile,
         [ValidateScript( { Test-Path $_ -PathType 'Container' } )][string]$Destination,
         [Parameter(Mandatory = $true)][string]$FileToGet,
@@ -15,7 +15,7 @@ function Get-FileFromZip {
     )
     try {
         $zip = [System.IO.Compression.ZipFile]::OpenRead($ZipFile)
-        $entries = $zip.Entries | Where-Object -Property Name -like ($FileToGet -replace '[$^{[()+]', '`$&')
+        $entries = $zip.Entries | Where-Object -Property Name -Like ($FileToGet -replace '[$^{[()+]', '`$&')
         foreach ($entry in $entries) {
             $destFile = Join-Path $destDir -ChildPath $entry.Name
             [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $destFile, $true)
@@ -23,14 +23,13 @@ function Get-FileFromZip {
         }
         if (!$PassThru) { ('Successfully extracted {0} file(s) from {1}' -f $entries.Count , ([System.IO.Path]::GetFileName($ZipFile))) }
         $zip.Dispose()
-    }
-    catch {
+    } catch {
         Write-Warning "Failed to get $FileToAdd from $ZipFile."
     }
 }
 function Add-FileToZip {
+    [cmdletbinding()]
     param(
-        [cmdletbinding()]
         [ValidateScript( { Test-Path $_ -PathType 'Leaf' } )][string]$ZipFile,
         [ValidateScript( { Test-Path $_ -PathType 'Leaf' } )][string]$FileToAdd
     )
@@ -40,8 +39,7 @@ function Add-FileToZip {
         [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $FileToAdd, $FileName, 'Optimal') | Out-Null
         $Zip.Dispose()
         ('Successfully added {0} to {1}' -f $FileName, ([System.IO.Path]::GetFileName($ZipFile)))
-    }
-    catch {
+    } catch {
         Write-Warning "Failed to add $FileToAdd to $ZipFile. Details: $_"
     }
 }

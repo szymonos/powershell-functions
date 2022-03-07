@@ -50,7 +50,7 @@ function Get-AzTableRows {
         $token = $result.ContinuationToken;
     } while ($null -ne $token)
     $azTableResult = $result.Result.Results
-    $AzTable = @()
+    $AzTable = [System.Collections.Generic.List[int]]::new()
     foreach ($res in $azTableResult) {
         $azProp = @{
             PartitionKey = $res.PartitionKey;
@@ -60,7 +60,7 @@ function Get-AzTableRows {
         foreach ($prop in $Property.Keys) {
             $azProp.Add($prop, $Property.Item($prop).PropertyAsObject)
         }
-        $AzTable += [pscustomobject]$azProp
+        $AzTable.Add([pscustomobject]$azProp)
     }
     return $AzTable
 }

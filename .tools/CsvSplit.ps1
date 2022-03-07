@@ -22,7 +22,7 @@ foreach ($folder in $allFolders) {
     if (!(Test-Path $dstFolder)) {
         New-Item -Path $dstFolder -ItemType Directory | Out-Null
     }
-    $folderFiles = ($allFiles | Where-Object -Property $folderUnique -eq $folder).$fileUnique
+    $folderFiles = ($allFiles | Where-Object -Property $folderUnique -EQ $folder).$fileUnique
     foreach ($file in $folderFiles) {
         #$file = $folderFiles[2]
         $csvFile = $csvImported | Where-Object { $_.$folderUnique -eq $folder -and $_.$fileUnique -eq $file }

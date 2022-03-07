@@ -8,7 +8,9 @@ FROM mcr.microsoft.com/azure-functions/powershell:3.0-powershell${VARIANT}-core-
 # Install PowerShell modules
 SHELL ["/usr/bin/pwsh", "-c"]
 RUN $ErrorActionPreference='Stop'; \
-    Install-Module PSReadLine -Force -AllowPrerelease;
+    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; \
+    Install-Module -Name PSReadLine -Force; \
+    Install-Module -Name posh-git -Force
 
 # Copy pwsh profile
 COPY src/profile.ps1 /root/.config/powershell/

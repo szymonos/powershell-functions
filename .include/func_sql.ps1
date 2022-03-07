@@ -5,7 +5,7 @@
 # Assemblies required for Azure Active Directory Authentication
 $verSqlClient = '2.0.1'
 $verSqlSNI = '2.1.1'
-$verIdentity = '4.22.0'
+$verIdentity = '4.35.1'
 $nugetPackages = 'C:\Program Files\PackageManagement\NuGet\Packages'
 $sqlClient = "$nugetPackages\Microsoft.Data.SqlClient.$verSqlClient\runtimes\win\lib\netcoreapp2.1\Microsoft.Data.SqlClient.dll"
 $sqlSNI = "$nugetPackages\Microsoft.Data.SqlClient.SNI.runtime.$verSqlSNI\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll"
@@ -14,8 +14,7 @@ try {
     Add-Type -AssemblyName System.Data
     Add-Type -Path $sqlClient -ReferencedAssemblies $sqlSNI
     Add-Type -Path $identityClient
-}
-catch {
+} catch {
     'Assembly already loaded'
 }
 
@@ -32,37 +31,47 @@ System.String
 function Resolve-ConnString {
     [cmdletbinding()]
     param (
-        [Parameter(Mandatory = $true)]
+        [Alias('s')][Parameter(Mandatory = $true)]
         [string]$ServerInstance,
 
-        [Parameter(Mandatory = $false)]
+        [Alias('d')][Parameter(Mandatory = $false)]
         [string]$Database = 'master',
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'PsCred')]
+        [Alias('c')][Parameter(Mandatory = $true, ParameterSetName = 'PsCred')]
         [pscredential]$Credential,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'UserPass')]
+        [Alias('u')][Parameter(Mandatory = $true, ParameterSetName = 'UserPass')]
         [string]$User,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'UserPass')]
-        [string]$Password,
+        [Alias('p')][Parameter(Mandatory = $false, ParameterSetName = 'UserPass')]
+        [securestring]$Password,
 
-        [Parameter(Mandatory = $false)][switch]$ConnectReplica
+        [Alias('r')][Parameter(Mandatory = $false)]
+        [switch]$ConnectReplica,
+
+        [Alias('i')][Parameter(Mandatory = $false)]
+        [switch]$Interactive
     )
     if ($Credential) {
-        $User = $Credential.GetNetworkCredential().UserName
-        $Password = $Credential.GetNetworkCredential().Password
+        $User = $Credential.UserName
+        $Password = $Credential.Password
     }
     $builder = New-Object -TypeName 'Microsoft.Data.SqlClient.SqlConnectionStringBuilder'
     $builder.Server = $ServerInstance
     $builder.Database = $Database
     $builder.User = $User
-    $builder.Password = $Password
+    if (!$Interactive) {
+        $builder.Password = ConvertFrom-SecureString $Password -AsPlainText
+    }
     # !for compatibility: builder replaces authentication to: ActiveDirectoryPassword
     # !                   which is not supported by sqlpackage as of 18.6
     $connString = $builder.ConnectionString
     if ($User | Select-String -Pattern '@') {
-        $connString += ';Authentication=Active Directory Password'
+        if ($Interactive) {
+            $connString += ';Authentication=Active Directory Interactive'
+        } else {
+            $connString += ';Authentication=Active Directory Password'
+        }
         #$builder.Authentication = "Active Directory Password"
     }
     # !for compatibility: builder replaces ApplicationIntent to: Application Intent
@@ -73,6 +82,7 @@ function Resolve-ConnString {
     }
     return $connString
 }
+
 function Invoke-SqlQuery {
     [cmdletbinding()]
     param(
@@ -95,7 +105,7 @@ function Invoke-SqlQuery {
 
         [Parameter(Mandatory = $false, ParameterSetName = 'Enumerate')]
         [Parameter(Mandatory = $true, ParameterSetName = 'UserPass')]
-        [string]$Password,
+        [securestring]$Password,
 
         [Parameter(ParameterSetName = 'Enumerate')]
         [switch]$ConnectReplica,
@@ -152,7 +162,7 @@ function Start-AzSqlDatabase {
 
         [Parameter(Mandatory = $false, ParameterSetName = 'Enumerate')]
         [Parameter(Mandatory = $true, ParameterSetName = 'UserPass')]
-        [string]$Password
+        [securestring]$Password
     )
     if ($ServerInstance) {
         $resParams = @{

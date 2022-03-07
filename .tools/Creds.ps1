@@ -13,15 +13,15 @@ $user = 'CONTOSO\username'
 $cred = Get-Credential $user -Message "Provide password for $user"
 
 # export credentials to file
-$cred | Export-CliXml -Path '.\.assets\export\cred.xml'
-$cred | Export-CliXml -Path "$($env:USERPROFILE)\cred.xml"
+$cred | Export-Clixml -Path '.\.assets\export\cred.xml'
+$cred | Export-Clixml -Path "$($HOME)\cred.xml"
 
 # import credentials
-$cred = Import-CliXml -Path '.\.assets\export\cred.xml'
-$cred = Import-CliXml -Path "$($env:USERPROFILE)\cred.xml"
+$cred = Import-Clixml -Path '.\.assets\export\cred.xml'
+$cred = Import-Clixml -Path "$($HOME)\cred.xml"
 
 # get user and pass from credential file
-Import-CliXml -Path "$($env:USERPROFILE)\cred.xml" | Select-Object -Property UserName, @{Name = 'Password'; Expression = {$_.GetNetworkCredential().Password}}
+Import-Clixml -Path "$($HOME)\cred.xml" | Select-Object -Property UserName, @{Name = 'Password'; Expression = { $_.GetNetworkCredential().Password } }
 $cred.GetNetworkCredential().UserName
 $cred.GetNetworkCredential().Password
 
@@ -33,46 +33,82 @@ $newPass = ConvertTo-SecureString -AsPlainText 'new_password' -Force
 $oldCred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "$domain\$identity", $oldPass
 Set-ADAccountPassword -Credential $oldcred -Identity $identity -OldPassword $oldPass -NewPassword $newPass
 $newCred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "$domain\$identity", $newPass
-$newCred | Export-CliXml -Path "$($env:USERPROFILE)\$identity.xml"
+$newCred | Export-Clixml -Path "$($HOME)\$identity.xml"
 
 <# *Microsoft.PowerShell.SecretsManagement
 .LINK
+https://github.com/powershell/secretstore
 https://github.com/powershell/secretmanagement
-https://devblogs.microsoft.com/powershell/secretmanagement-preview-3/
-https://devblogs.microsoft.com/powershell/secretmanagement-and-secretstore-updates/
+https://github.com/JustinGrote/SecretManagement.KeePass
+https://devblogs.microsoft.com/powershell/secretmanagement-and-secretstore-release-candidate-2/
+https://devblogs.microsoft.com/powershell/secretmanagement-and-secretstore-are-generally-available/
 .EXAMPLE
-Install-Module -Name Microsoft.PowerShell.SecretManagement -Scope CurrentUser -AllowPrerelease -Force
-Install-Module -Name Microsoft.PowerShell.SecretStore -Scope CurrentUser -AllowPrerelease -Force
-Reset-SecretStore
-Register-SecretVault -Name SecretStore -ModuleName Microsoft.PowerShell.SecretStore -DefaultVault
-
-Get-InstalledModule -Name Microsoft.PowerShell.SecretManagement | Select-Object *
+# *Update SecretStore module.
+Uninstall-Module Microsoft.PowerShell.SecretManagement -Force
+Uninstall-Module Microsoft.PowerShell.SecretStore -Force
+# Restart your PowerShell session
+Install-Module Microsoft.PowerShell.SecretManagement, Microsoft.PowerShell.SecretStore
+* set paswordless SecretStore
+Set-SecretStoreConfiguration -Authentication None -Interaction None
+Get-InstalledModule -Name Microsoft.PowerShell.SecretStore | Select-Object -Property Version, Name, Repository, InstalledLocation
 #>
 # register extension vaults
 Register-SecretVault -Name SecretStore -ModuleName Microsoft.PowerShell.SecretStore -DefaultVault
 Get-SecretVault
-Unregister-SecretVault
-Test-SecretVault # new cmdlet in this release
+Unregister-SecretVault -Name SecretStore
+Test-SecretVault
 
 # Accessing secrets
-Set-Secret
 Get-Secret
-Get-SecretInfo
-Remove-Secret 'secretname' -Vault BuiltInLocalVault
+Get-SecretInfo -Vault SecretStore
+Remove-Secret 'secretname' -Vault SecretStore
 
-Get-Help Get-Secret
+# manage SecretStore
+Get-SecretStoreConfiguration
+Set-SecretStoreConfiguration
+Unlock-SecretStore
+Set-SecretStorePassword
+Reset-SecretStore
+
+# *Store/Retrieve secrets.
+$secretName = 'secretname'
+$secretValue = 'passw0rd'
+# store secret
+Set-Secret $secretName -Secret $secretValue
+# retrieve secret
+Get-Secret $secretName -AsPlainText
 
 # store PSCredential
-$secret = 'secretname'
-$user = 'username'
-$pass = ConvertTo-SecureString -String 'Passw0rd' -AsPlainText -Force
+$user = 'username'; $pass = ConvertTo-SecureString -String $secretValue -AsPlainText -Force
 $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $user, $pass
-Set-Secret $secret -Secret $cred
+Set-Secret $secretName -Secret $cred
 # retreive pscredential
-$cred = Get-Secret $secret
-Get-Secret 'secretname' | Select-Object -Property UserName, @{Name = 'Password'; Expression = {$_.GetNetworkCredential().Password}}
+$cred = Get-Secret $secretName
+$cred | Select-Object -Property UserName, @{Name = 'Password'; Expression = { $_.GetNetworkCredential().Password } }
+$cred.GetNetworkCredential().Password
 
-# store SecureString
-Set-Secret $secret -SecureStringSecret $pass
-# retreive secure string
-Get-Secret $secret -AsPlainText
+# add metadata to existing secret
+Set-SecretInfo $secretName -Metadata @{ Name = Value }
+(Get-SecretInfo $secretName -Vault SecretStore).Metadata
+
+<# *Register KeePass Secret Management Extension.
+Install-Module SecretManagement.Keepass
+#>
+Register-SecretVault -Name 'KeePass' -ModuleName 'SecretManagement.Keepass' -VaultParameters @{
+    Path              = 'path/to/my/vault.kdbx'
+    UseMasterPassword = $true
+    KeyPath           = 'path/to/my/keyfile.key'
+}
+Test-SecretVault -Name 'KeePass'
+Get-SecretInfo -Vault 'KeePass'
+(Get-Secret -Name $secretName -Vault 'KeePass').GetNetworkCredential().Password
+
+# *Register KeyVault Secret Management Extension.
+$vaultName = 'kv-musci-weu'
+$subID = (Get-AzSubscription -SubscriptionName 'SZYMONOS-MSDN').Id
+Register-SecretVault -Module Az.KeyVault -Name AzKv -VaultParameters @{
+    AZKVaultName   = $vaultName
+    SubscriptionId = $subID
+}
+Test-SecretVault -Name 'AzKv'
+Get-Secret -Name 'SecretName' -Vault 'AzKv' -AsPlainText

@@ -1,43 +1,59 @@
 // For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.134.1/containers/azure-functions-pwsh
 {
-    "name": "Azure Functions & PowerShell",
-    "build": {
-        "dockerfile": "Dockerfile",
-        "args": {
-            // Update the VARIANT arg to pick a supported PowerShell version: 7, 6
-            "VARIANT": "7"
-        }
+  "name": "Azure Functions & PowerShell",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      // Update the VARIANT arg to pick a supported PowerShell version: 7, 6
+      "VARIANT": "7"
+    }
+  },
+  "forwardPorts": [
+    7071
+  ],
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  // Set *default* container specific settings.json values on container create.
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "pwsh",
+    "terminal.integrated.profiles.linux": {
+      "bash": {
+        "icon": "terminal-bash",
+        "path": "bash"
+      },
+      "pwsh": {
+        "args": [
+          "-Login",
+          "-NoLogo"
+        ],
+        "icon": "terminal-powershell",
+        "path": "pwsh"
+      },
     },
-    "forwardPorts": [ 7071 ],
-    "mounts": [ "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind" ],
-
-    // Set *default* container specific settings.json values on container create.
-    "settings": {
-        "terminal.integrated.shell.linux": "/usr/bin/pwsh",
-        "workbench.colorTheme": "dark-plus-syntax"
-    },
-
-    // Add the IDs of extensions you want installed when the container is created.
-    "extensions": [
-        "ms-azuretools.vscode-azurefunctions",
-        "ms-azuretools.vscode-docker",
-        "ms-vscode.powershell",
-        "redhat.vscode-yaml",
-        "visualstudioexptteam.vscodeintellicode",
-        "shardulm94.trailing-spaces",
-        "eamodio.gitlens",
-        "tyriar.shell-launcher",
-        "dunstontc.dark-plus-syntax",
-        "aaron-bond.better-comments",
-        "mechatroner.rainbow-csv"
-    ],
-
-    // Use 'postCreateCommand' to run commands after the container is created.
-    // "postCreateCommand": "pwsh -c 'Set-PSReadLineOption -PredictionSource History'",
-    // "postCreateCommand": "dotnet restore",
-    // "postCreateCommand": "pwsh -c './pysetup.ps1 -Venv'"
-
-    // Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
-    // "remoteUser": "vscode"
+    "workbench.colorTheme": "Default Dark+",
+  },
+  // Add the IDs of extensions you want installed when the container is created.
+  "extensions": [
+    "aaron-bond.better-comments",
+    "eamodio.gitlens",
+    "foxundermoon.shell-format",
+    "mechatroner.rainbow-csv",
+    "ms-azuretools.vscode-azurefunctions",
+    "ms-azuretools.vscode-docker",
+    "ms-vscode.powershell",
+    "nhoizey.gremlins",
+    "redhat.vscode-yaml",
+    "shardulm94.trailing-spaces",
+    "tyriar.shell-launcher",
+    "usernamehw.errorlens",
+    "visualstudioexptteam.vscodeintellicode"
+  ],
+  // Use 'postCreateCommand' to run commands after the container is created.
+  "postCreateCommand": "pwsh -c 'Enable-ExperimentalFeature PSAnsiRenderingFileInfo'",
+  // "postCreateCommand": "dotnet restore",
+  // "postCreateCommand": "pwsh -c './pysetup.ps1 -Venv'"
+  // Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
+  // "remoteUser": "vscode"
 }

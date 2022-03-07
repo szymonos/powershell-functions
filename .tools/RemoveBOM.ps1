@@ -4,7 +4,7 @@
 #>
 
 $utf8Encoding = New-Object System.Text.UTF8Encoding($False)
-$source = '.\'
+$source = './'
 
 $folderList = Get-ChildItem -Path $source -Directory -Exclude '.git'
 foreach ($folder in $folderList) {

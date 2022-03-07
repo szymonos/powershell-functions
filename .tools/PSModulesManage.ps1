@@ -1,60 +1,54 @@
+#Requires -Version 7.0
+#Requires -RunAsAdministrator
 <#
-.Description
-Remove old versions of Powershell modules
-.Example
-.tools\PSModulesManage.ps1
-.tools\PSModulesManage.ps1 2 --to remove old versions
-.tools\PSModulesManage.ps1 3 --to update modules and remove old versions
+.SYNOPSIS
+Script for updating PowerShell modules and cleaning-up old versions.
+.EXAMPLE
+.tools\PSModulesManage.ps1      # *update and clean up modules
+.tools\PSModulesManage.ps1 -u   # *update modules only
+.tools\PSModulesManage.ps1 -c   # *clean up modules only
 #>
 
 param (
-    [int]$mode = 0
+    [Alias('u')][switch]$Update,
+    [Alias('c')][switch]$CleanUp
 )
 
 Clear-Host
-$mods = Get-InstalledModule
-
-switch ($mode) {
-    { $_ -eq 3 } {
-        Write-Host 'Updating all modules' -ForegroundColor Green
-        Update-Module -AcceptLicense
-    }
-    { $_ -in (2, 3) } {
-        Write-Output 'This will remove all old versions of installed modules.'
-        Write-Host "Be sure to run this as an admin!`n" -ForegroundColor Yellow
-
-        foreach ($mod in $mods) {
-            Write-Output "Checking $($mod.name)"
-            $latest = Get-InstalledModule $mod.name
-            $specificmods = Get-InstalledModule $mod.name -AllVersions
-            Write-Host "$(($specificmods | Measure-Object).count) version(s) of this module found [$($mod.name)]" -ForegroundColor Cyan
-
-            foreach ($sm in $specificmods) {
-                if ($sm.version -ne $latest.version) {
-                    Write-Host "uninstalling $($sm.name) - $($sm.version) [latest is $($latest.version)]" -ForegroundColor Magenta
-                    $sm | Uninstall-Module -Force
-                    Write-Host "done uninstalling $($sm.name) - $($sm.version)" -ForegroundColor Green
-                    Write-Output '    --------'
+if (-not $CleanUp) {
+    "$($PSStyle.Foreground.Yellow)Update all modules.$($PSStyle.Reset)"
+    Update-Module -AcceptLicense
+    "$($PSStyle.Foreground.Yellow)Check prerelease versions.$($PSStyle.Reset)"
+    $prerelease = (Get-InstalledModule).Where({ $_.Version -match '-' })
+    foreach ($mod in $prerelease) {
+        "- $($mod.Name)"
+        (Find-Module -Name $mod.Name -AllowPrerelease).ForEach({
+                if ($_.Version -ne $mod.Version) {
+                    "$($PSStyle.Foreground.Green)Found newer version: $($PSStyle.Bold)$($_.Version)$($PSStyle.Reset)"
+                    Install-Module -Name $mod.Name -AllowPrerelease -AllowClobber -Force -AcceptLicense
                 }
-            }
-            Write-Output '------------------------'
-        }
-        Write-Output 'Done'
+            })
     }
-    { $_ -ne 2 } {
-        Write-Output "This will report all modules with duplicate (older and newer) versions installed.`n"
+}
 
-        foreach ($mod in $mods) {
-            Write-Output "Checking $($mod.name)"
-            $specificmods = Get-InstalledModule $mod.name -AllVersions
-            Write-Host "$(($specificmods | Measure-Object).count) version(s) of this module found" -ForegroundColor Cyan
+if (-not $Update) {
+    "$($PSStyle.Foreground.Yellow)Get installed modules.$($PSStyle.Reset)"
+    $installedModules = Get-InstalledModule | Sort-Object -Property Name
 
-            foreach ($sm in $specificmods) {
-                if ($sm.version -eq $mod.version) { $color = 'Green' }
-                else { $color = 'Magenta' }
-                Write-Host "$($sm.name) v$($sm.version) [latest is $($mod.version)]" -ForegroundColor $color
+    foreach ($mod in $installedModules) {
+        "`n$($PSStyle.Underline)Check $($mod.Name)$($PSStyle.Reset)"
+        $allVersions = @(Get-InstalledModule $mod.Name -AllVersions)
+        $latestVersion = ($allVersions | Sort-Object PublishedDate)[-1].Version
+        if ($allVersions.Count -eq 1) {
+            "$($PSStyle.Foreground.Green)latest version $($PSStyle.Bold)v$latestVersion$($PSStyle.BoldOff) installed$($PSStyle.Reset)"
+        } else {
+            "$($PSStyle.Foreground.Cyan)$($allVersions.Count) versions of the module found, latest: $($PSStyle.Bold)v$latestVersion$($PSStyle.Reset)"
+            'uninstall'
+            foreach ($v in $allVersions.Where({ $_.Version -ne $latestVersion })) {
+                "- $($PSStyle.Foreground.BrightMagenta)v$($v.Version)$($PSStyle.Reset)"
+                $v | Uninstall-Module -Force
             }
-            Write-Output '------------------------'
         }
     }
 }
+"`nDone!"

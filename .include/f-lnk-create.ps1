@@ -7,14 +7,14 @@ https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/16cb4ca1
 .PARAMETER Source
 $Source = "$env:SystemRoot\System32\notepad.exe"
 .PARAMETER Destination
-$Destination = "$env:USERPROFILE\Desktop"
+$Destination = "$HOME\Desktop"
 .EXAMPLE
 .include\f-lnk-create.ps1
 #>
 
 function New-ShellShortcut {
+    [cmdletbinding()]
     param(
-        [cmdletbinding()]
         [ValidateScript( { Test-Path $_ } )]$Source,
         [ValidateScript( { Test-Path $_ -PathType 'Container' } )]$Destination
     )
